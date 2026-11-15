@@ -144,7 +144,7 @@ function Thermo({ lo, hi, val, q05, q95, base, color, unit, d, hoy }) {
 export default function Planet2050({ cur, res, pname, L, lang }) {
   const k = cur.k, u = V[k].u, d = V[k].d, pts = useMemo(() => I.fillGaps(cur.raw).pts, [cur]);
   const lastYear = pts[pts.length - 1].year, yrs = Math.max(3, 2050 - lastYear);
-  const [mult, setMult] = useState(1), [year, setYear] = useState(2050), [play, setPlay] = useState(false), [layerId, setLayerId] = useState('veg'), [names, setNames] = useState(true), [split, setSplit] = useState(false), [pos, setPos] = useState(0.5);
+  const [mult, setMult] = useState(1), [year, setYear] = useState(2050), [play, setPlay] = useState(false), [layerId, setLayerId] = useState('base'), [names, setNames] = useState(false), [split, setSplit] = useState(false), [pos, setPos] = useState(0.5);
   const snap = useRef(null);
   const S = useMemo(() => ({ 0: I.simulate(pts, { years: yrs, mult: 0, B: 250 }), 1: I.simulate(pts, { years: yrs, mult: 1, B: 300 }), 2: I.simulate(pts, { years: yrs, mult: 2, B: 250 }) }), [pts, yrs]);
   const hist = useMemo(() => { const m = new Map(); pts.forEach((p) => { const a = m.get(p.year) || [0, 0]; a[0] += p.v; a[1]++; m.set(p.year, a); }); return [...m.entries()].filter(([, a]) => a[1] === 12).map(([y, a]) => ({ year: y, v: a[0] / a[1] })); }, [pts]);
