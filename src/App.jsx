@@ -39,6 +39,7 @@ class Guard extends Component {
 }
 const V = { inicio: Hero, explorar: WorldMap, lab: Lab, decidir: Decide, lagos: Lakes, aprender: Game, proyecto: Project };
 export default function App() {
+  useEffect(() => { try { const v = new URLSearchParams(location.search).get('vista'); if (v && V[v]) useStore.setState({ view: v }); } catch { /* sin parámetros */ } }, []);
   useEffect(() => { startAgent(); const t = setTimeout(() => { try { sessionStorage.removeItem('ts_reload'); } catch { /* */ } }, 10000); const h = () => { if (!sessionStorage.getItem('ts_reload')) { try { sessionStorage.setItem('ts_reload', '1'); } catch { /* */ } location.reload(); } }; window.addEventListener('vite:preloadError', h); return () => { clearTimeout(t); window.removeEventListener('vite:preloadError', h); }; }, []);
   const practice = useStore((s) => s.practice), lakesL = useStore((s) => s.lakes);
   useEffect(() => { const t = setTimeout(() => { if (useStore.getState().agent.last) runCycle(); }, 800); return () => clearTimeout(t); }, [practice, lakesL]);

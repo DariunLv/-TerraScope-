@@ -779,3 +779,9 @@ footer .fkilla{display:flex;justify-content:center;margin-bottom:6px}
 .hc-n b{color:#14213d}
 .hc-wait{height:130px;display:grid;place-items:center;color:#5b6b8c;font-size:.9rem}
 .herocase .mantine-Button-root{align-self:flex-start}
+
+.coh{display:flex;gap:14px;align-items:flex-start;padding:14px 18px;margin-top:14px;border:1px solid #cfe3da;background:#f3faf6}
+.coh.warn{background:#fff8ea;border-color:#f3d39a}
+.coh-av{flex:none}
+.coh-b b{display:block;color:#0f3d2e;margin-bottom:4px}
+.coh-b ul{margin:6px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:.9rem;line-height:1.5}

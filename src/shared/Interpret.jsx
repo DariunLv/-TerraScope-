@@ -6,16 +6,17 @@ import { Loader } from '@mantine/core';
 import { useT } from '../core/i18n';
 import Killa from '../killa/Killa';
 import { explainChart } from '../features/decide/llm';
+import { useStore } from '../core/store';
 
-export default function Interpret({ title, facts, plain, how }) {
+export default function Interpret({ title, facts, plain, how, next }) {
   const { lang } = useT(), L = (a, b) => (lang === 'es' ? a : b);
-  const [st, setSt] = useState('idle'), [txt, setTxt] = useState(''), [ai, setAi] = useState(false);
+  const aud = useStore((x) => x.aud), [st, setSt] = useState('idle'), [txt, setTxt] = useState(''), [ai, setAi] = useState(false);
   useEffect(() => { setSt('idle'); setTxt(''); }, [facts, lang]);
   const go = async () => {
     if (st === 'open') { setSt('idle'); return; }
     setSt('load');
-    try { const t = await explainChart({ title, facts, lang }); setTxt(t); setAi(true); }
-    catch { setTxt(`${how ? how + '\n' : ''}${plain || ''}`); setAi(false); }
+    try { const t = await explainChart({ title, facts, lang, aud }); setTxt(t); setAi(true); }
+    catch { setTxt(`${how ? how + '\n' : ''}${plain || ''}${next ? '\n' + L('Siguiente paso: ', 'Next step: ') + next : ''}`); setAi(false); }
     setSt('open');
   };
   return (
@@ -24,7 +25,7 @@ export default function Interpret({ title, facts, plain, how }) {
       <AnimatePresence>{st === 'open' && (
         <motion.div className="interp-t" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
           <div className="interp-in">
-            <Rich text={txt.replace(/\*\*/g, '').replace(/\s*(Cómo se lee:|Qué dice aquí:|Ojo:|How to read it:|What it says here:|Careful:)/g, '\n**$1** ')} />
+            <Rich text={txt.replace(/\*\*/g, '').replace(/\s*(Cómo se lee:|Qué dice aquí:|Ojo:|Siguiente paso:|How to read it:|What it says here:|Careful:|Next step:)/g, '\n**$1** ')} />
             <small>{ai ? L('Explicado por Killa con los números de este gráfico.', 'Explained by Killa using this chart’s numbers.') : L('Explicación básica (la IA no respondió).', 'Basic explanation (the AI did not answer).')}</small>
           </div>
         </motion.div>)}</AnimatePresence>

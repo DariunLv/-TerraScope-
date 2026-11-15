@@ -4,7 +4,7 @@
    escenarios condicionales de lluvia y temperatura, y señales de alerta temprana (varianza y autocorrelación).
    No es un sistema operativo de emergencias: es apoyo para priorizar y decidir con evidencia. */
 import * as I from '../../lib/analysis/intel';
-import { mannKendall, senSlope, ols, mean } from '../../lib/analysis/stats';
+import { mannKendall, senSlope, ols, mean, analyze } from '../../lib/analysis/stats';
 import { last12 } from '../lakes/lakeclim';
 import { km, SAMPLE_POINTS } from '../lakes/lakesData';
 
@@ -180,3 +180,18 @@ export function validate(clim, rows) {
   const unresolved = eps.filter((e) => e.b + 12 > wb.length - 1 && !real.includes(e)).length;
   return { minR, minVal: roll[minR.i], dryT, w1, w2, lead1: lead(w1), lead2: lead(w2), eps: eps.length, hit: real.length, unresolved, months: rows.filter((r) => r.level >= 1).length, total: rows.length, roll: (i) => roll[i] };
 }
+
+/* Revisión de coherencia: busca contradicciones entre las distintas vistas del mismo lugar y las explica. */
+export function coherence(A, tgt, clim, rows, L) {
+  const out = [], sgn = (x) => (x > 0 ? '+' : x < 0 ? '−' : '');
+  const row = (rows || []).find((r) => r.id === tgt.id);
+  if (row && row.level !== A.level) out.push({ t: L('El Centinela y el semáforo no coinciden', 'The Sentinel and the traffic light disagree'), b: L(`El Centinela marca ${LVN[row.level][0]} porque mira solo el clima de los últimos 12 meses (balance z = ${sgn(row.zw)}${Math.abs(row.zw).toFixed(1)}, temperatura z = ${sgn(row.zt)}${Math.abs(row.zt).toFixed(1)}). El semáforo marca ${LV[A.level].es} porque suma además la simulación del próximo año, la tendencia y la temperatura. Son preguntas distintas.`, `The Sentinel shows ${LVN[row.level][1]} because it only looks at the last 12 months of climate (balance z = ${sgn(row.zw)}${Math.abs(row.zw).toFixed(1)}, temperature z = ${sgn(row.zt)}${Math.abs(row.zt).toFixed(1)}). The traffic light shows ${LV[A.level].en} because it also adds the next-year simulation, the trend and temperature. They are different questions.`) });
+  try {
+    const m = analyze(clim.wb, {}), annSign = Math.sign(A.perDec), annSig = A.mk.p < 0.05, monSig = m.p < 0.05;
+    if (annSign !== Math.sign(m.perDec * 12) || annSig !== monSig) out.push({ t: L('Los dos métodos de tendencia no coinciden', 'The two trend methods disagree'), b: L(`Con años completos la pendiente es ${sgn(A.perDec)}${Math.abs(A.perDec).toFixed(1)} mm por década (p ${A.mk.p < 0.001 ? '< 0,001' : '= ' + A.mk.p.toFixed(3).replace('.', ',')}); con la serie mensual sin estación es ${sgn(m.perDec * 12)}${Math.abs(m.perDec * 12).toFixed(1)} mm por década (p ${m.p < 0.001 ? '< 0,001' : '= ' + m.p.toFixed(3).replace('.', ',')}). Cuando dos métodos razonables no coinciden, la tendencia es frágil: no la uses como conclusión.`, `With full years the slope is ${sgn(A.perDec)}${Math.abs(A.perDec).toFixed(1)} mm per decade (p ${A.mk.p < 0.001 ? '< 0.001' : '= ' + A.mk.p.toFixed(3)}); with the monthly deseasonalised series it is ${sgn(m.perDec * 12)}${Math.abs(m.perDec * 12).toFixed(1)} mm per decade (p ${m.p < 0.001 ? '< 0.001' : '= ' + m.p.toFixed(3)}). When two reasonable methods disagree the trend is fragile: do not use it as a conclusion.`) });
+  } catch { /* serie corta */ }
+  if (A.bt && A.conf >= 70 && A.bt.coverage < 0.85) out.push({ t: L('La confianza es mayor que la cobertura real', 'Confidence is higher than real coverage'), b: L(`La confianza es ${A.conf}/100, pero el intervalo nominal del 90 % cubrió solo ${Math.round(A.bt.coverage * 100)} % en la prueba. Trata los rangos como orientativos.`, `Confidence is ${A.conf}/100, but the nominal 90 % interval covered only ${Math.round(A.bt.coverage * 100)} % in the test. Treat the ranges as indicative.`) });
+  if (!A.live && A.level > 0) out.push({ t: L('El aviso se basa en datos simulados', 'The warning relies on simulated data'), b: L('Estás en modo práctica: el nivel mostrado no describe el lugar real.', 'You are in practice mode: the level shown does not describe the real place.') });
+  return out;
+}
+const LVN = [['Normal', 'Normal'], ['Vigilar', 'Watch'], ['Alerta', 'Alert']];
