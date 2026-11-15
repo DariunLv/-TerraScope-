@@ -36,7 +36,7 @@ function FitLine({ L }) {
         <button className="textlink" onClick={() => setShow(!show)}>{show ? L('Ocultar la respuesta', 'Hide the answer') : L('Ver la línea que calcula la regresión', 'Show the regression line')}</button>
         <button className="textlink" onClick={() => { setY(mk()); setS(0); setShow(false); }}>{L('Otra serie', 'Another series')}</button>
       </div>
-      {show && <p className="mini">{L(`La regresión elige la pendiente que hace mínimo el error total: ${o.slope.toFixed(3)} por paso. La prueba t pregunta si esa pendiente es distinta de cero (aquí p = ${o.p < 0.001 ? '< 0,001' : o.p.toFixed(3)}).`, `Regression picks the slope with the smallest total error: ${o.slope.toFixed(3)} per step. The t-test asks whether that slope differs from zero (here p = ${o.p < 0.001 ? '< 0.001' : o.p.toFixed(3)}).`)}</p>}
+      {show && <p className="mini">{L(`La regresión elige la pendiente que hace mínimo el error total: ${o.slope.toFixed(3)} por paso. La prueba t pregunta si esa pendiente es distinta de cero (aquí p ${o.p < 0.001 ? '< 0,001' : '= ' + o.p.toFixed(3)}).`, `Regression picks the slope with the smallest total error: ${o.slope.toFixed(3)} per step. The t-test asks whether that slope differs from zero (here p ${o.p < 0.001 ? '< 0.001' : '= ' + o.p.toFixed(3)}).`)}</p>}
     </div>
   );
 }

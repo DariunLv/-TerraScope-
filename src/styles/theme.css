@@ -772,3 +772,10 @@ footer .fkilla{display:flex;justify-content:center;margin-bottom:6px}
 .st-pill{font:700 12.5px var(--fb);padding:5px 12px;border-radius:99px;border:1px solid #cfe3da;background:#eef7f2;color:#0c5a43}
 .st-pill.warn{background:#fff4e0;border-color:#f3d39a;color:#9a5b05}
 .bigk em{line-height:1.4}
+
+.herocase{margin:16px 0 4px;padding:14px 16px;border:1px solid #d5e2dc;border-radius:18px;background:rgba(255,255,255,.88);max-width:430px;display:flex;flex-direction:column;gap:8px}
+.hc-q{font:800 1.05rem var(--fh,inherit);color:#0f3d2e}
+.hc-n{margin:0;font-size:.82rem;line-height:1.45;color:#46556f}
+.hc-n b{color:#14213d}
+.hc-wait{height:130px;display:grid;place-items:center;color:#5b6b8c;font-size:.9rem}
+.herocase .mantine-Button-root{align-self:flex-start}

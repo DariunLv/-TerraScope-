@@ -89,6 +89,7 @@ export default function Lab() {
                 <span className="mini">{pname(res.pl)} · {V[cur.k][lang][0]} · {L('fuente', 'source')}: {sourceOf(cur.k)}</span>
                 <div className="big">{t.verdicts[cur.r.level]}</div>
                 <div className="bignum"><span className="num"><CountUp key={cur.k} to={Math.abs(cur.r.perDec)} decimals={V[cur.k].d} duration={1.1} /></span> <span className="unit">{V[cur.k].u} {t.per} {cur.r.dir > 0 ? <IconTrendingUp size={16} style={{ verticalAlign: '-3px' }} /> : <IconTrendingDown size={16} style={{ verticalAlign: '-3px' }} />}</span></div>
+                <small className="mini" style={{ display: 'block' }}>{L('Pendiente de Sen sobre la serie mensual sin estación', 'Sen slope on the monthly deseasonalised series')}, {Math.floor(cur.r.x[0])}–{Math.floor(cur.r.x[cur.r.n - 1])}.</small>
                 <div>{t.lvlText[cur.r.level]}</div>
                 <Progress mt="sm" value={(cur.r.count / 3) * 100} styles={{ section: { background: COL[cur.r.level] } }} />
               </div>

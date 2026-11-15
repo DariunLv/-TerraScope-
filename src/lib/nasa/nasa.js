@@ -55,7 +55,7 @@ export async function cmrCollections(q) {
 export const MISSIONS = [
   { id: 'hlsl', pat: 'HLSL30', res: '30 m', es: ['Landsat 8 y 9 (HLS)', 'Imagen óptica: superficie del agua y vegetación.'], en: ['Landsat 8 and 9 (HLS)', 'Optical image: water surface and vegetation.'] },
   { id: 'hlss', pat: 'HLSS30', res: '30 m', es: ['Sentinel-2 (HLS)', 'Imagen óptica con revisita frecuente.'], en: ['Sentinel-2 (HLS)', 'Optical image with frequent revisit.'] },
-  { id: 'dswx', pat: 'OPERA_L3_DSWX-HLS*', res: '30 m', es: ['OPERA: extensión de agua', 'Mapa de agua superficial ya clasificado por la NASA.'], en: ['OPERA: surface water extent', 'Surface water map already classified by NASA.'] },
+  { id: 'dswx', pat: 'OPERA_L3_DSWX-HLS*', res: '30 m', es: ['OPERA: extensión de agua', 'Mapa de agua superficial ya clasificado por la NASA (producto óptico: necesita cielo despejado).'], en: ['OPERA: surface water extent', 'Surface water map already classified by NASA (optical product: needs clear sky).'] },
   { id: 'rtc', pat: 'OPERA_L2_RTC-S1*', res: '30 m', es: ['Radar Sentinel-1 (OPERA)', 'Radar: ve el agua aunque haya nubes.'], en: ['Sentinel-1 radar (OPERA)', 'Radar: sees water through clouds.'] },
   { id: 'swot', pat: 'SWOT_L2_HR_LakeSP*', res: '≥ 250 m', es: ['SWOT: nivel y área de lagos', 'Altura y superficie del agua de cada lago.'], en: ['SWOT: lake level and area', 'Water height and surface of each lake.'] },
   { id: 'mod13', pat: 'MOD13Q1', res: '250 m', es: ['MODIS: vegetación', 'Índice de vegetación cada 16 días desde 2000.'], en: ['MODIS: vegetation', '16-day vegetation index since 2000.'] },

@@ -33,7 +33,7 @@ export default {
     teamTitle: 'El equipo', leader: 'Líder', member: 'Integrante',
     learnBento: [
       { title: 'Tendencia', description: 'Cambio sostenido, no un año raro.', visual: 'analytics', colSpan: 2 },
-      { title: 'Valor p', description: 'Si es menor a 0,05, desconfiamos del azar.', visual: 'security' },
+      { title: 'Valor p', description: 'Un p pequeño: un resultado tan extremo sería raro si no hubiera tendencia.', visual: 'security' },
       { title: 'Intervalo', description: 'Si cruza el cero, no hay seguridad.', visual: 'integration' },
       { title: 'Autocorrelación', description: 'El clima tiene memoria: lo corregimos.', visual: 'automation', colSpan: 2 },
     ],
@@ -74,7 +74,7 @@ export default {
     teamTitle: 'The team', leader: 'Leader', member: 'Member',
     learnBento: [
       { title: 'Trend', description: 'Sustained change, not one odd year.', visual: 'analytics', colSpan: 2 },
-      { title: 'p-value', description: 'Below 0.05 we distrust chance.', visual: 'security' },
+      { title: 'p-value', description: 'Small p: such an extreme result would be rare if there were no trend.', visual: 'security' },
       { title: 'Interval', description: 'If it crosses zero, we are not sure.', visual: 'integration' },
       { title: 'Autocorrelation', description: 'Climate has memory: we correct for it.', visual: 'automation', colSpan: 2 },
     ],

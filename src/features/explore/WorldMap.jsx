@@ -81,7 +81,7 @@ export default function WorldMap() {
           </g>
         </svg>
         <div className="mapzoom"><button onClick={() => zoomBy(1.6)} aria-label="zoom in"><IconZoomIn size={18} /></button><button onClick={() => zoomBy(1 / 1.6)} aria-label="zoom out"><IconZoomOut size={18} /></button></div>
-        {hov && <div className="maptip"><b>{hov.name}</b>{hov.perDec != null && <div>{hov.perDec > 0 ? '+' : ''}{hov.perDec.toFixed(V[k].d)} {V[k].u} / {L('década', 'decade')} · p = {hov.p < 0.001 ? '< 0.001' : hov.p.toFixed(3)} · {hov.fdr ? L('significativo (FDR)', 'significant (FDR)') : L('no significativo', 'not significant')}</div>}</div>}
+        {hov && <div className="maptip"><b>{hov.name}</b>{hov.perDec != null && <div>{hov.perDec > 0 ? '+' : ''}{hov.perDec.toFixed(V[k].d)} {V[k].u} / {L('década', 'decade')} · p {hov.p < 0.001 ? '< 0.001' : '= ' + hov.p.toFixed(3)} · {hov.fdr ? L('significativo (FDR)', 'significant (FDR)') : L('no significativo', 'not significant')}</div>}</div>}
         <div className="mapsel"><span className="mini">{L('Tu punto', 'Your point')}</span><b>{placeLabel(place, PLACES, lang)}</b>
           <Button size="compact-sm" color="forest" mt={6} leftSection={<IconFlask size={14} />} onClick={() => openCase({ vars: [k, ...(k === 'T2M' ? ['PRECTOTCORR'] : ['T2M'])] }, place)}>{L('Investigar', 'Investigate')}</Button>
           <button className="textlink" onClick={() => setMapOpen(true)}><IconMap2 size={14} /> {L('Ver satélite', 'Satellite view')}</button></div>

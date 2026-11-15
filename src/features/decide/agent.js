@@ -30,7 +30,7 @@ export async function runCycle() {
   const space = eelSpace(rows);
   set({ step: 'discover' }); await tick();
   // cambios desde la revisión anterior
-  const now = {}; rows.forEach((r) => { now[r.id] = { level: r.level, zw: +r.zw.toFixed(2), name: r.name }; if (prev[r.id] && prev[r.id].level !== r.level) events.push({ kind: 'change', id: r.id, name: r.name, from: prev[r.id].level, to: r.level }); });
+  const now = {}; rows.forEach((r) => { now[r.id] = { level: r.level, zw: +r.zw.toFixed(2), name: r.name }; if (prev[r.id] && prev[r.id].level !== r.level) events.push({ kind: 'change', id: r.id, name: r.name, from: prev[r.id].level, to: r.level, zw: +r.zw.toFixed(2), zt: +r.zt.toFixed(2) }); });
   if (!Object.keys(prev).length) events.push({ kind: 'first', n: rows.length });
   set({ step: 'hypothesis' }); await tick();
   set({ step: 'evidence' }); await tick();

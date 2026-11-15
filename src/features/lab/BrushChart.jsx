@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import { motion } from 'framer-motion';
-import { ols, mannKendall } from '../../lib/analysis/stats';
+import { senSlope, mannKendall } from '../../lib/analysis/stats';
 import { useT } from '../../core/i18n';
 import { useWidth } from '../../shared/charts/hooks';
 /* Serie con foco + contexto (D3): arrastra en la franja inferior para elegir un periodo y recalcular la tendencia al instante. */
@@ -11,7 +11,7 @@ export default function BrushChart({ r, unit, dec }) {
   const [dom, setDom] = useState(null); const [hv, setHv] = useState(null); const ctx = useRef(null);
   const full = [r.x[0], r.x[r.n - 1]], d = dom || full;
   const idx = useMemo(() => { const a = []; for (let i = 0; i < r.n; i++) if (r.x[i] >= d[0] && r.x[i] <= d[1]) a.push(i); return a; }, [r, d[0], d[1]]);
-  const sel = useMemo(() => { if (idx.length < 24) return null; const xs = idx.map((i) => r.x[i]), ys = idx.map((i) => r.y[i]), o = ols(xs, ys), mk = mannKendall(ys); return { o, p: mk.p, xs }; }, [idx, r]);
+  const sel = useMemo(() => { if (idx.length < 24) return null; const xs = idx.map((i) => r.x[i]), ys = idx.map((i) => r.y[i]), mk = mannKendall(ys), o = senSlope(xs, ys, mk.varS); return { o, p: mk.p, xs }; }, [idx, r]);
   const sx = d3.scaleLinear().domain(d).range([m.l, w - m.r]);
   const ext = d3.extent(idx.length ? idx.map((i) => r.y[i]) : r.y), pad = (ext[1] - ext[0]) * 0.08 || 1;
   const sy = d3.scaleLinear().domain([ext[0] - pad, ext[1] + pad]).range([H - m.b, m.t]);
@@ -30,8 +30,8 @@ export default function BrushChart({ r, unit, dec }) {
   return (
     <div ref={ref}>
       <div className="brushinfo">
-        <span>{L('Periodo', 'Period')}: <b>{Math.floor(d[0])}–{Math.floor(d[1])}</b></span>
-        {sel ? <><span>{L('Tendencia', 'Trend')}: <b style={{ color: up ? '#c2410c' : '#1e40af' }}>{up ? '+' : ''}{(sel.o.slope * 10).toFixed(dec)} {unit} / {L('década', 'decade')}</b></span><span className={'sigpill ' + (sig ? 'yes' : 'no')}>{sig ? L('Significativa', 'Significant') : L('No significativa', 'Not significant')} · p = {sel.p < 0.001 ? '< 0.001' : sel.p.toFixed(3)}</span></> : <span>{L('Elige al menos 2 años', 'Pick at least 2 years')}</span>}
+        <span>{L('Periodo (serie mensual sin estación)', 'Period (monthly, deseasonalised)')}: <b>{Math.floor(d[0])}–{Math.floor(d[1])}</b></span>
+        {sel ? <><span>{L('Pendiente de Sen', 'Sen slope')}: <b style={{ color: up ? '#c2410c' : '#1e40af' }}>{up ? '+' : ''}{(sel.o.slope * 10).toFixed(dec)} {unit} / {L('década', 'decade')}</b></span><span className={'sigpill ' + (sig ? 'yes' : 'no')}>{sig ? L('Significativa', 'Significant') : L('No significativa', 'Not significant')} · p {sel.p < 0.001 ? '< 0.001' : '= ' + sel.p.toFixed(3)}</span></> : <span>{L('Elige al menos 2 años', 'Pick at least 2 years')}</span>}
         {dom && <button className="textlink" onClick={() => { setDom(null); d3.select(ctx.current).call(d3.brushX().move, null); }}>{L('Ver todo', 'Show all')}</button>}
       </div>
       <svg width={w} height={H} onPointerMove={move} onPointerLeave={() => setHv(null)} style={{ display: 'block', touchAction: 'pan-y' }}>
