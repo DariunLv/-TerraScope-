@@ -755,3 +755,20 @@ footer .fkilla{display:flex;justify-content:center;margin-bottom:6px}
 .cases>div{display:flex}.cases>div>.case{flex:1;display:flex;flex-direction:column;width:100%}.case .go{margin-top:auto;padding-top:12px}
 .bignum .unit,.bignum .unit *{letter-spacing:0!important;word-spacing:.08em!important}
 .bignum .unit{font-size:16px;font-weight:700}
+
+/* v12: texto de la IA con formato limpio */
+.rich{display:flex;flex-direction:column;gap:8px;line-height:1.55}
+.rich-p{margin:0!important}
+.rich-l{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+.rich-l li{padding-left:2px}
+.rich b{font-weight:700;color:inherit}
+.msg .rich{font-size:.95rem}
+.rich-t{overflow-x:auto;border:1px solid #d5e2dc;border-radius:12px;background:#fff}
+.rich-t table{border-collapse:collapse;width:100%;font-size:.82rem}
+.rich-t th{background:#e6f1ec;color:#0f3d2e;text-align:left;font-weight:700;padding:6px 8px}
+.rich-t td{padding:6px 8px;border-top:1px solid #e4ede9;vertical-align:top}
+
+.st-two{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px}
+.st-pill{font:700 12.5px var(--fb);padding:5px 12px;border-radius:99px;border:1px solid #cfe3da;background:#eef7f2;color:#0c5a43}
+.st-pill.warn{background:#fff4e0;border-color:#f3d39a;color:#9a5b05}
+.bigk em{line-height:1.4}

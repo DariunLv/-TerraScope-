@@ -40,7 +40,7 @@ export default function Hero() {
           </div>
           <TourLink className="textlink tourlink" />
           <Select className="herosearch" size="md" radius="xl" searchable clearable={false} leftSection={<IconSearch size={18} />} placeholder={L('O busca un lugar o un lago…', 'Or search a place or a lake…')} data={opts} onChange={pick} maxDropdownHeight={280} nothingFoundMessage={L('Sin resultados', 'No results')} />
-          <ul className="hero-badges"><li><IconShieldCheck size={18} />{L('Semáforo y alertas', 'Traffic light and alerts')}</li><li><IconCrystalBall size={18} />{L('Tres futuros posibles', 'Three possible futures')}</li><li><IconMessageChatbot size={18} />{L('Asistente que responde', 'Assistant that answers')}</li></ul>
+          <ul className="hero-badges" hidden><li><IconShieldCheck size={18} />{L('Semáforo y alertas', 'Traffic light and alerts')}</li><li><IconCrystalBall size={18} />{L('Tres futuros posibles', 'Three possible futures')}</li><li><IconMessageChatbot size={18} />{L('Asistente que responde', 'Assistant that answers')}</li></ul>
         </div>
         <div id="planeta" className="hero-r"><Earth mode="hero" /><div className="hero-killa"><KillaSay estado="bienvenida" size={150} text={L('¡Hola! Soy Killa. Te ayudo a saber si el agua de un lugar está bien.', 'Hi! I am Killa. I help you check whether a place’s water is okay.')} /></div></div></div>
         <div className="paths">
@@ -59,14 +59,14 @@ export default function Hero() {
             <h2 className="band-title">{L('No solo mostramos datos: te decimos qué hacer', 'We do not just show data: we tell you what to do')}</h2>
             <p className="band-sub">{L('Para cada lago o lugar la app calcula un semáforo, compara qué pasaría si ocurre algo peligroso, si no ocurre nada o si todo está tranquilo, y responde tus preguntas.', 'For each lake or place the app computes a traffic light, compares what would happen if something dangerous happens, nothing happens or all stays calm, and answers your questions.')}</p></div>
           <div className="trio">
-            {[[IconFlame, L('Si ocurre algo peligroso', 'If something dangerous happens'), L('Sequía y calor extremos: cuánta agua faltaría y qué hacer antes.', 'Severe drought and heat: how much water would be short and what to do first.'), '#fca5a5'], [IconEqual, L('Si no ocurre nada nuevo', 'If nothing new happens'), L('Se repite el clima reciente: ¿alcanza el agua o ya hay una tendencia?', 'Recent climate repeats: is there enough water or is there already a trend?'), '#bfdbfe'], [IconSunHigh, L('Si todo está tranquilo', 'If all stays calm'), L('Un año húmedo: cuánto se recupera y cómo aprovecharlo.', 'A wet year: how much recovers and how to use it.'), '#86efac']].map(([I, a, b, c], i) => (
+            {[[IconFlame, L('Sequía y calor', 'Drought and heat'), L('Si ocurre algo peligroso: cuánta agua faltaría y qué hacer antes.', 'Severe drought and heat: how much water would be short and what to do first.'), '#fca5a5'], [IconEqual, L('Clima reciente', 'Recent climate'), L('Si no ocurre nada nuevo: ¿alcanza el agua o ya hay una tendencia?', 'Recent climate repeats: is there enough water or is there already a trend?'), '#bfdbfe'], [IconSunHigh, L('Año húmedo', 'Wet year'), L('Si todo está tranquilo: cuánto se recupera y cómo aprovecharlo.', 'A wet year: how much recovers and how to use it.'), '#86efac']].map(([I, a, b, c], i) => (
               <motion.div key={a} className="trio-c" style={{ '--c': c }} initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}><span><I size={26} /></span><h3>{a}</h3><p>{b}</p></motion.div>))}
           </div>
-          <Button size="xl" radius="xl" className="cta-light" rightSection={<IconArrowRight size={22} />} onClick={() => { setLake('pastogrande'); setView('decidir'); }}>{L('Probar con el embalse Pasto Grande', 'Try it with the Pasto Grande reservoir')}</Button>
+          <Button size="xl" radius="xl" className="cta-light" rightSection={<IconArrowRight size={22} />} onClick={() => { setLake('titicaca'); setView('decidir'); }}>{L('Probar con el lago Titicaca', 'Try it with Lake Titicaca')}</Button>
         </div>
       </div>
       <div className="wrap">
-        <h2 className="smarth">{L('Más que gráficos: una app que razona con los datos', 'More than charts: an app that reasons with data')}</h2>
+        <h2 className="smarth">{L('¿Está cambiando el clima del lugar que te importa?', 'Is the climate of the place you care about changing?')}</h2>
         <div className="smart">
           {smart.map(([I, a, b, v], i) => (
             <motion.button key={a} className="smartc" onClick={() => setView(v)} initial={{ opacity: 0, y: 26, scale: 0.97 }} whileInView={{ opacity: 1, y: 0, scale: 1 }} whileHover={{ y: -4 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }}>

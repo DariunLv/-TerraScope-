@@ -1,5 +1,5 @@
 # Detectives de Tendencias (React)
-Equipo The Innovators · NASA Space Apps 2026 · Moquegua
+Equipo The Innovators · NASA Space Apps 2026 · Puno · Sede Moquegua
 
 Stack: Vite, React, Mantine, Framer Motion, GSAP, react-globe.gl, MapLibre + NASA GIBS, Zustand, canvas-confetti.
 

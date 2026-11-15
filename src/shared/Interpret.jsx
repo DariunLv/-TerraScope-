@@ -1,3 +1,4 @@
+import Rich from './Rich';
 /* "Explícame este gráfico": la IA interpreta el gráfico para quien no sabe leerlo. Si la IA no responde, muestra una lectura básica escrita por la app. */
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -23,8 +24,8 @@ export default function Interpret({ title, facts, plain, how }) {
       <AnimatePresence>{st === 'open' && (
         <motion.div className="interp-t" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
           <div className="interp-in">
-            {txt.replace(/\s*(Cómo se lee:|Qué dice aquí:|Ojo:|How to read it:|What it says here:|Careful:)/g, '\n$1').split('\n').filter(Boolean).map((l, i) => { const m = l.match(/^([^:]{3,22}:)\s*(.*)$/); return <p key={i}>{m ? <><b>{m[1]}</b> {m[2]}</> : l}</p>; })}
-            <small>{ai ? L('Explicado por la IA de la app con los números de este gráfico.', 'Explained by the app’s AI using this chart’s numbers.') : L('Explicación básica (la IA no respondió).', 'Basic explanation (the AI did not answer).')}</small>
+            <Rich text={txt.replace(/\*\*/g, '').replace(/\s*(Cómo se lee:|Qué dice aquí:|Ojo:|How to read it:|What it says here:|Careful:)/g, '\n**$1** ')} />
+            <small>{ai ? L('Explicado por Killa con los números de este gráfico.', 'Explained by Killa using this chart’s numbers.') : L('Explicación básica (la IA no respondió).', 'Basic explanation (the AI did not answer).')}</small>
           </div>
         </motion.div>)}</AnimatePresence>
     </div>

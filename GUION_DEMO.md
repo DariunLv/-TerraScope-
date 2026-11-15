@@ -5,7 +5,7 @@ Antes: ejecutar `npm run datos` con internet y publicar con la instantánea (dat
 | Tiempo | Qué se hace | Qué se dice |
 |---|---|---|
 | 0:00 | Portada, botón "Abrir el centro de decisiones" | "Los satélites de la NASA dan miles de datos; las autoridades necesitan una respuesta: ¿qué pasa con el agua y qué hago?" |
-| 0:20 | Elegir **Embalse Pasto Grande** | "Elegimos un lugar. La app lee 40 años de NASA POWER." |
+| 0:20 | Elegir **Lago Titicaca** | "Elegimos un lugar. La app lee 40 años de NASA POWER." |
 | 0:45 | Sección "¿Hay una tendencia de fondo?" | "Mann-Kendall dice si el cambio es real o azar: aquí es significativo / no lo es." |
 | 1:10 | Semáforo y confianza | "Resumen en un color, con cuánta confianza y por qué." |
 | 1:35 | "¿Habría avisado a tiempo?" | "Recalculamos mes a mes sin mirar el futuro: avisó X meses antes del mínimo de agua." |

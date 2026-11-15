@@ -12,9 +12,9 @@ export const LV = [{ es: 'Tranquilo', en: 'Calm', c: '#0c7a5b' }, { es: 'Vigilar
 const cl = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
 const quant = (s, q) => { const p = (s.length - 1) * q, i = Math.floor(p), f = p - i; return s[i + 1] !== undefined ? s[i] * (1 - f) + s[i + 1] * f : s[i]; };
 export const SC = [
-  { id: 'bad', es: 'Si ocurre algo peligroso', en: 'If something dangerous happens', sub: ['Sequía y calor extremos', 'Severe drought and heat'], p: { dT: 2.5, dP: -0.15 }, c: '#b91c1c' },
-  { id: 'same', es: 'Si no ocurre nada nuevo', en: 'If nothing new happens', sub: ['Se repite el clima de los últimos años', 'The climate of recent years repeats'], p: { dT: 0, dP: 0 }, c: '#1e3a8a' },
-  { id: 'good', es: 'Si todo está tranquilo', en: 'If all stays calm', sub: ['Más lluvia que lo normal', 'More rain than normal'], p: { dT: 0, dP: 0.12 }, c: '#0c7a5b' },
+  { id: 'bad', es: 'Sequía y calor', en: 'Drought and heat', sub: ['Si ocurre algo peligroso: sequía y calor extremos', 'If something dangerous happens: severe drought and heat'], p: { dT: 2.5, dP: -0.15 }, c: '#b91c1c' },
+  { id: 'same', es: 'Clima reciente', en: 'Recent climate', sub: ['Si no ocurre nada nuevo: se repite el clima de los últimos años', 'If nothing new happens: the climate of recent years repeats'], p: { dT: 0, dP: 0 }, c: '#1e3a8a' },
+  { id: 'good', es: 'Año húmedo', en: 'Wet year', sub: ['Si todo está tranquilo: más lluvia que lo normal', 'If all stays calm: more rain than normal'], p: { dT: 0, dP: 0.12 }, c: '#0c7a5b' },
 ];
 
 /* Evaluación completa de un punto o lago. `clim` viene de lakeClimate(). */

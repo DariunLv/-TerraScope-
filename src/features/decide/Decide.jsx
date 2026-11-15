@@ -1,3 +1,4 @@
+import Rich from '../../shared/Rich';
 /* Centro de decisiones: de los datos a qué hacer.
    Semáforo + tres futuros posibles + alertas con su evidencia + asistente de consulta + confianza,
    lenguaje de la Tierra (EEL), descubrimientos automáticos y pasaporte de evidencia. Todo local. */
@@ -59,7 +60,7 @@ function Chat({ A, tgt, ann, sweep, clim, L, lang }) {
   const modeName = cfg.mode === 'ollama' ? L(`IA local (${cfg.ollamaModel})`, `Local AI (${cfg.ollamaModel})`) : cfg.mode === 'claude' ? L('IA Claude (API)', 'Claude AI (API)') : cfg.mode === 'online' ? L('IA en línea', 'Online AI') : L('Reglas locales', 'Local rules');
   return (
     <div className="chat card" id="asistente">
-      <div className="chat-h"><span className="chat-ico"><Killa estado={busy ? 'pensando' : 'explicando'} size={64} look={false} shadow={false} /></span><div><b>{L('Asistente de decisiones', 'Decision assistant')}</b><span>{modeName} · {L('responde con las cifras de este análisis', 'answers with this analysis’s figures')}</span></div>
+      <div className="chat-h"><span className="chat-ico"><Killa estado={busy ? 'pensando' : 'explicando'} size={64} look={false} shadow={false} /></span><div><b>{L('Killa, tu asistente', 'Killa, your assistant')}</b><span>{modeName} · {L('responde con las cifras de este análisis', 'answers with this analysis’s figures')}</span></div>
         <button className="chat-cog" onClick={() => setCog(!cog)} aria-label={L('Ajustes de la IA', 'AI settings')}><IconSettings size={20} /></button></div>
       {cog && <div className="chat-set">
         <SegmentedControl fullWidth size="xs" color="forest" value={cfg.mode} onChange={(v) => upd({ mode: v })} data={[{ value: 'online', label: L('En línea', 'Online') }, { value: 'rules', label: L('Reglas', 'Rules') }, { value: 'ollama', label: L('IA local', 'Local AI') }, { value: 'claude', label: 'Claude' }]} />
@@ -71,7 +72,7 @@ function Chat({ A, tgt, ann, sweep, clim, L, lang }) {
         {cfg.mode !== 'rules' && <div className="row" style={{ gap: 8 }}><Button size="xs" color="forest" variant="light" onClick={probar}>{L('Probar conexión', 'Test connection')}</Button><span className="mini">{test}</span></div>}
       </div>}
       <div className="chat-log" ref={box}>
-        {msgs.map((m, i) => (<motion.div key={i} className={'msg' + (m.me ? ' me' : '')} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>{!m.me && <span className="msg-av"><Killa estado={m.tag === 'ai' ? 'idea' : m.miss ? 'duda' : 'bienvenida'} size={38} live={false} shadow={false} tap={false} /></span>}{!m.me && m.tag === 'ai' && <i className="aitag">{L('IA', 'AI')}</i>}<p>{m.text}</p>{m.note && <small>{m.note}</small>}</motion.div>))}
+        {msgs.map((m, i) => (<motion.div key={i} className={'msg' + (m.me ? ' me' : '')} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>{!m.me && <span className="msg-av"><Killa estado={m.tag === 'ai' ? 'idea' : m.miss ? 'duda' : 'bienvenida'} size={38} live={false} shadow={false} tap={false} /></span>}{!m.me && m.tag === 'ai' && <i className="aitag">Killa</i>}<Rich text={m.text} />{m.note && <small>{m.note}</small>}</motion.div>))}
         {busy && <div className="msg typing"><span className="msg-av"><Killa estado="pensando" size={38} shadow={false} tap={false} /></span><i /><i /><i /></div>}
       </div>
       <div className="chat-chips">{chips(L).map((c) => <button key={c} onClick={() => send(c)}>{c}</button>)}</div>
@@ -86,7 +87,7 @@ function Chat({ A, tgt, ann, sweep, clim, L, lang }) {
 export default function Decide() {
   const { lang } = useT(); const L = (a, b) => (lang === 'es' ? a : b);
   const { practice, lakes, setView } = useStore();
-  const [sel, setSel] = useState('l:pastogrande'), [clim, setClim] = useState(null), [pass, setPass] = useState(null), [copied, setCopied] = useState(false), [aud, setAud] = useState('auth');
+  const [sel, setSel] = useState('l:titicaca'), [clim, setClim] = useState(null), [pass, setPass] = useState(null), [copied, setCopied] = useState(false), [aud, setAud] = useState('auth');
   const tgt = useMemo(() => { const [k, id] = sel.split(':'); if (k === 'l') return { ...(lakes.find((x) => x.id === id) || lakes[0]) }; const p = PLACES.find((x) => x.id === id) || PLACES[0]; return { id: p.id, name: p[lang], lat: p.lat, lon: p.lon }; }, [sel, lakes, lang]);
   useEffect(() => { let on = true; setClim(null); lakeClimate(tgt, practice).then((c) => on && setClim(c)).catch(() => on && setClim(false)); return () => { on = false; }; }, [tgt.id, tgt.lat, tgt.lon, practice]);
   const A = useMemo(() => (clim ? assess(clim, tgt, L) : null), [clim, lang, tgt]);
@@ -99,12 +100,12 @@ export default function Decide() {
   const dl = () => { if (!pass) return; useStore.getState().sayKilla('descarga', L('Pasaporte descargado.', 'Passport downloaded.')); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(pass, null, 2)], { type: 'application/json' })); a.download = `${pass.id}.json`; a.click(); };
   const cp = () => { navigator.clipboard?.writeText(pass.id); setCopied(true); setTimeout(() => setCopied(false), 1500); };
   const lvc = A ? LV[A.level].c : '#64748b', Ic = A ? LVI[A.level] : IconEye;
-  const head = !A ? '' : A.level === 0 ? L('Todo dentro de lo normal', 'Everything within normal') : A.kind === 'wet' ? L('Exceso de agua: vigila posibles desbordes', 'Excess water: watch for overflow') : A.level === 1 ? L('Hay señales de que el agua empieza a faltar', 'Signs that water is starting to run short') : L('Riesgo alto de falta de agua', 'High risk of water shortage');
-  const lead = !A ? '' : A.level === 0 ? L(`En ${tgt.name} el balance de agua de los últimos 12 meses está dentro de lo esperable. No hace falta actuar; sí seguir midiendo.`, `At ${tgt.name} the water balance of the last 12 months is within what is expected. No action needed; keep measuring.`) : A.alerts.find((a) => a.lv > 0)?.why;
+  const head = !A ? '' : A.level === 0 ? L('Balance climático dentro del rango histórico', 'Climate balance within the historical range') : A.kind === 'wet' ? L('Exceso de agua: vigila posibles desbordes', 'Excess water: watch for overflow') : A.level === 1 ? L('Hay señales de que el agua empieza a faltar', 'Signs that water is starting to run short') : L('Riesgo alto de falta de agua', 'High risk of water shortage');
+  const lead = !A ? '' : A.level === 0 ? L(`En ${tgt.name} la lluvia menos la evaporación de los últimos 12 meses está dentro de lo esperable. Es un índice del clima de la zona, no el nivel medido del lago o embalse. ${A.pDry >= 0.2 ? `Aun así, la simulación da ${Math.round(A.pDry * 100)} % de que el próximo año sea de los más secos (lo normal es 10 %): conviene preparar un plan sin actuar todavía.` : 'No hace falta actuar; sí seguir midiendo.'}`, `At ${tgt.name} rain minus evaporation over the last 12 months is within what is expected. It is a climate index for the area, not the measured lake or reservoir level. ${A.pDry >= 0.2 ? `Even so, the simulation gives ${Math.round(A.pDry * 100)} % that next year is among the driest (normal is 10 %): prepare a plan without acting yet.` : 'No action needed; keep measuring.'}`) : A.alerts.find((a) => a.lv > 0)?.why;
   const act = A ? actions(A, L) : null, end = A ? `${MES[lang][A.w.end.month]} ${A.w.end.year}` : '';
   const ann = clim?.ann;
   const sOpt = useMemo(() => {
-    if (!A) return null; const cats = [L('Ahora', 'Now'), L('Peligroso', 'Dangerous'), L('Sin novedad', 'Nothing new'), L('Tranquilo', 'Calm')], col = ['#94a3b8', ...A.scen.map((s) => s.c)], vals = [A.scen[0].r.now, ...A.scen.map((s) => s.r.val)];
+    if (!A) return null; const cats = [L('Ahora', 'Now'), L('Sequía y calor', 'Drought and heat'), L('Clima reciente', 'Recent climate'), L('Año húmedo', 'Wet year')], col = ['#94a3b8', ...A.scen.map((s) => s.c)], vals = [A.scen[0].r.now, ...A.scen.map((s) => s.r.val)];
     return { textStyle: { color: '#5b6b8c', fontFamily: 'Inter Variable, sans-serif' }, grid: { left: 64, right: 118, top: 34, bottom: 36 }, tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: (v) => Math.round(v) + ' mm' },
       xAxis: { type: 'category', data: cats, axisTick: { show: false }, axisLabel: { fontSize: 14, fontWeight: 700, color: '#14213d' } }, yAxis: { type: 'value', name: L('mm por año', 'mm per year'), nameTextStyle: { align: 'left' }, splitLine: { lineStyle: { color: '#eef2f7' } } },
       series: [{ type: 'bar', barWidth: '46%', data: vals.map((v, i) => ({ value: +v.toFixed(0), itemStyle: { color: col[i], borderRadius: v >= 0 ? [10, 10, 0, 0] : [0, 0, 10, 10] } })), label: { show: true, position: 'top', fontWeight: 800, fontSize: 15, color: '#14213d', formatter: (p) => p.value + ' mm' },
@@ -161,6 +162,7 @@ export default function Decide() {
           <div className="st-gauge"><Gauge risk={A.risk} color={lvc} label={L('Nivel de riesgo', 'Risk level')} /><div className="gnum"><CountUp key={tgt.id} to={A.risk} duration={1.2} /><small>/100</small></div><span className="gcap">{L('Riesgo', 'Risk')}</span></div>
           <div className="st-main">
             <span className="lvchip"><Ic size={22} />{LV[A.level][lang]}</span>
+            <div className="st-two"><span className="st-pill ok">{L('Ahora', 'Now')}: {A.w.z <= -1 ? L('balance reciente bajo', 'recent balance low') : L('balance reciente dentro de lo esperado', 'recent balance as expected')}</span><span className={'st-pill ' + (A.pDry >= 0.2 ? 'warn' : 'ok')}>{L('Próximo año', 'Next year')}: {A.pDry >= 0.2 ? L('riesgo elevado según la simulación', 'elevated risk in the simulation') : L('riesgo normal según la simulación', 'normal risk in the simulation')}</span></div>
             <h2 className="st-head">{head}</h2>
             <p className="st-lead">{lead}</p>
             <div className="st-btns">
@@ -169,9 +171,9 @@ export default function Decide() {
             </div>
           </div>
           <div className="st-kpis">
-            <div className="bigk"><span>{L('Balance de agua, 12 meses', 'Water balance, 12 months')}</span><b>{Math.round(A.w.last)}<small> mm</small></b><em>{L('normal', 'normal')} {Math.round(A.w.normal)} mm · {A.w.z >= 0 ? '+' : '−'}{Math.abs(A.w.z).toFixed(1)} σ</em></div>
-            <div className="bigk"><span>{L('Probabilidad de año seco', 'Dry-year probability')}</span><b>{Math.round(A.pDry * 100)}<small> %</small></b><em>{L('lo normal es 10 %', 'normal is 10 %')}</em></div>
-            <div className="bigk"><span>{L('Confianza del resultado', 'Result confidence')}</span><b>{A.conf}<small> /100</small></b><em>{L('datos hasta', 'data to')} {end}</em></div>
+            <div className="bigk"><span>{L('Balance climático (lluvia − evaporación), 12 meses', 'Climate balance (rain − evaporation), 12 months')}</span><b>{Math.round(A.w.last)}<small> mm</small></b><em>{L('índice de la zona (celda ~50 km), no el nivel del lago o embalse. Normal', 'area index (~50 km cell), not the lake or reservoir level. Normal')} {Math.round(A.w.normal)} mm · {A.w.z >= 0 ? '+' : '−'}{Math.abs(A.w.z).toFixed(1)} σ</em></div>
+            <div className="bigk"><span>{L('Probabilidad de año seco', 'Dry-year probability')}</span><b>{Math.round(A.pDry * 100)}<small> %</small></b><em>{L('Simulación de 500 años posibles. El 10 % es lo que se espera por definición: el 10 % de los años de la historia son los más secos.', '500 simulated possible years. 10 % is expected by definition: 10 % of historical years are the driest.')}</em></div>
+            <div className="bigk"><span>{L('Confianza del resultado', 'Result confidence')}</span><b>{A.conf}<small> /100</small></b><em>{A.bt ? L(`El intervalo nominal del 90 % cubrió ${Math.round(A.bt.coverage * 100)} % en los últimos 5 años de prueba. El ${A.conf}/100 combina calidad de datos, años de serie, cercanía de estaciones y esa validación.`, `The nominal 90 % interval covered ${Math.round(A.bt.coverage * 100)} % over the last 5 test years. The ${A.conf}/100 combines data quality, series length, station distance and that validation.`) : L('datos hasta', 'data to')} · {end}</em></div>
           </div>
         </motion.div>
 
@@ -182,7 +184,7 @@ export default function Decide() {
             <span className="lvchip" style={{ '--lv': tr.lvl === 2 ? '#0c5a43' : tr.lvl === 1 ? '#d97706' : '#64748b' }}>{tr.lvl === 2 ? L('Tendencia significativa', 'Significant trend') : tr.lvl === 1 ? L('Tendencia probable', 'Likely trend') : L('Sin tendencia clara', 'No clear trend')}</span>
             <b className="tk-v">{tr.perDec >= 0 ? '+' : '−'}{Math.abs(Math.round(tr.perDec))}<small> mm {L('por década', 'per decade')}</small></b>
             <p>{tr.lvl === 0 ? L('El cambio es pequeño frente a la variación natural entre años: puede ser azar.', 'The change is small compared with natural year-to-year variation: it may be chance.') : tr.dir ? L('El agua disponible viene disminuyendo y es poco probable que sea casualidad.', 'Available water has been decreasing and it is unlikely to be chance.') : L('El agua disponible viene aumentando y es poco probable que sea casualidad.', 'Available water has been increasing and it is unlikely to be chance.')}</p>
-            <small>Mann-Kendall: p = {tr.p < 0.001 ? '< 0.001' : tr.p.toFixed(3)} · {L('intervalo 95 % de Sen', 'Sen 95 % interval')}: [{Math.round(tr.ci[0])}, {Math.round(tr.ci[1])}] mm/{L('década', 'decade')}</small>
+            <small>{L('Balance anual de', 'Annual balance from')} {ann[0].year} {L('a', 'to')} {ann[ann.length - 1].year} · {L('pendiente de Sen sobre años completos', 'Sen slope on full years')} · Mann-Kendall: p = {tr.p < 0.001 ? '< 0.001' : tr.p.toFixed(3)} · {L('intervalo 95 % de Sen', 'Sen 95 % interval')}: [{Math.round(tr.ci[0])}, {Math.round(tr.ci[1])}] mm/{L('década', 'decade')}</small>
           </div></div>}
 
         <h2 className="blockh" id="futuros">{L('Tres futuros posibles', 'Three possible futures')}<span>{L('Qué pasaría con el agua de este lugar si ocurre algo peligroso, si no ocurre nada nuevo o si todo está tranquilo.', 'What would happen to this place’s water if something dangerous happens, if nothing new happens or if all stays calm.')}</span></h2>

@@ -2,7 +2,7 @@ import { useStore } from './store';
 import X from './i18n2';
 const D = {
   es: {
-    brand: 'Detectives de Tendencias', team: 'The Innovators · NASA Space Apps 2026 · Moquegua',
+    brand: 'Detectives de Tendencias', team: 'The Innovators · NASA Space Apps 2026 · Puno · Sede Moquegua',
     nav: ['Planeta', 'Mapa', 'Casos', 'Laboratorio', 'Aprende', 'Datos', 'Brechas'],
     heroKicker: 'Desafío NASA · Be an Earth System Trend Detective',
     heroTitle: '¿Está cambiando el clima de tu lugar? Averígualo como un detective.',
@@ -38,12 +38,12 @@ const D = {
       ['Valor p', 'La probabilidad de ver un patrón así si todo fuera azar. Si es menor a 0,05, desconfiamos del azar.'],
       ['Intervalo de confianza', 'Un rango razonable para la pendiente. Si cruza el cero, no podemos asegurar que suba o baje.']],
     gapsTitle: 'Brechas y necesidades que el programa resuelve', gapsSub: 'Revisión de literatura científica relacionada. Cada brecha se conecta con una función del programa.',
-    scales: ['Local · Moquegua', 'Nacional · Perú', 'Mundial', 'Lagos y lagunas', 'Frontera científica'],
+    scales: ['Local · Puno', 'Nacional · Perú', 'Mundial', 'Lagos y lagunas', 'Frontera científica'],
     refs: 'Referencias principales', footer: 'Hecho por The Innovators para NASA Space Apps Challenge 2026 · Datos: NASA POWER (MERRA-2/CERES) · Imágenes: NASA GIBS / Blue Marble.',
     disclaimer: 'POWER es un modelo de reanálisis a ~50 km: sirve para detectar tendencias, no reemplaza estaciones locales, sobre todo en montañas.',
   },
   en: {
-    brand: 'Trend Detectives', team: 'The Innovators · NASA Space Apps 2026 · Moquegua',
+    brand: 'Trend Detectives', team: 'The Innovators · NASA Space Apps 2026 · Puno · Sede Moquegua',
     nav: ['Planet', 'Map', 'Cases', 'Lab', 'Learn', 'Data', 'Gaps'],
     heroKicker: 'NASA Challenge · Be an Earth System Trend Detective',
     heroTitle: 'Is the climate where you live changing? Find out like a detective.',
@@ -79,7 +79,7 @@ const D = {
       ['p-value', 'The probability of seeing such a pattern if everything were chance. Below 0.05 we distrust chance.'],
       ['Confidence interval', 'A reasonable range for the slope. If it crosses zero we cannot say it rises or falls.']],
     gapsTitle: 'Gaps and needs the program solves', gapsSub: 'Review of related scientific literature. Each gap maps to a feature of the program.',
-    scales: ['Local · Moquegua', 'National · Peru', 'Global', 'Lakes', 'Science frontier'],
+    scales: ['Local · Puno', 'National · Peru', 'Global', 'Lakes', 'Science frontier'],
     refs: 'Main references', footer: 'Made by The Innovators for NASA Space Apps Challenge 2026 · Data: NASA POWER (MERRA-2/CERES) · Imagery: NASA GIBS / Blue Marble.',
     disclaimer: 'POWER is a ~50 km reanalysis: good for detecting trends, not a replacement for local stations, especially in mountains.',
   },
