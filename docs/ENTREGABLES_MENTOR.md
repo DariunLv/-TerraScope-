@@ -31,3 +31,14 @@ Desarrollar una plataforma web interactiva para consultar, visualizar y analizar
 
 ## Recomendación del mentor aplicada
 Ámbito inicial acotado: lagos y embalses del sur del Perú (Moquegua, Puno, Arequipa, Tacna) y cinco variables (lluvia, evaporación, temperatura, temperatura de superficie y humedad del suelo).
+
+
+## Actualización de la versión 7
+
+| Recomendación del mentor | Estado en el prototipo |
+|---|---|
+| Plataforma integrada tipo LAGOS | Inventario, planeta 3D con imágenes por año, clima de cada lago, vigía y satélites disponibles en una sola sección. Se puede cargar el inventario oficial en CSV. |
+| Clasificación de agua según altitud | Simulación didáctica por franja de altitud. El planeta muestra la capa de falso color y la app cuenta las escenas OPERA DSWx (agua ya clasificada a 30 m) sobre cada lago. |
+| Representatividad de los puntos de monitoreo | Cobertura por distancia y por franja de altitud, con carga de los puntos oficiales en CSV. |
+| Herramienta única con inventario, series y estadística espacial | Balance de agua, escenarios, anomalías, pronóstico validado y alerta temprana desde la ficha de cada lago. |
+| Interfaz para elegir variable, región y periodo | Asistente por pasos con validación (Mantine Stepper, React Hook Form y Zod). |

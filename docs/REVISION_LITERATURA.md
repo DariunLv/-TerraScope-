@@ -29,6 +29,21 @@ Alcance: revisión dirigida de artículos científicos, informes oficiales y not
 | Tendencias opuestas por región | Texto del reto; Acker et al. (2009) | Mapa mundial con signo de la tendencia |
 | Reanálisis tomado como verdad | Evaluación de NASA POWER; Marzouk (2021) | Fuente visible por variable + validación |
 
+## Frontera científica (revisión de noviembre de 2026)
+
+| Brecha | Evidencia | Qué hace la app |
+|---|---|---|
+| Los grandes lagos pierden agua y pocos se vigilan | Yao et al. (2023, Science): descenso significativo en el 53 % de los 1 972 mayores lagos entre 1992 y 2020. Zhao et al. (2022): la evaporación de 1,42 millones de lagos va en aumento. | Balance lluvia − evaporación por lago, tendencia y escenarios. |
+| En el Titicaca mandan la lluvia y la evaporación | Lima-Quispe et al. (2024, EGUsphere); Frappart et al. (2024): niveles mínimos en 2023-2025. | El balance usa justo esas dos variables; el nivel real se sube en CSV. |
+| Las plataformas esperan que el usuario sepa qué buscar | Zhu et al. (2026): conciencia de lugar y escala e incertidumbre siguen sin resolverse juntas. | Vigía de anomalías y normalidad contextual por lugar y mes. |
+| La IA de la Tierra no dice cuándo no es confiable | Prithvi-EO-2.0 (NASA-IBM, 4,2 millones de series); Zhu et al. (2026). | Bandas de incertidumbre, validación retrospectiva y abstención. |
+| Señales de alerta temprana mal calculadas | Scheffer et al. (2009); Dakos et al. (2012); Smith et al. (2023): mezclar sensores crea señales falsas. | Varianza y autocorrelación móviles con series simuladas de contraste. |
+| Ningún satélite basta solo | SWOT pierde exactitud en lagos pequeños (EGU25-19750); OPERA DSWx-HLS da agua clasificada a 30 m desde 2023. | Conteo en vivo de escenas por misión sobre cada lago. |
+| 4 557 lagunas glaciares y riesgo de aluviones | Wood et al. (inventario del Perú); Emmer et al. (2020). | Franja de altitud, vigía y carga del inventario oficial. |
+| Falta validación en terreno | LOCSS (NASA): ciudadanos miden el nivel con error cercano a 1 cm. | Reporte ciudadano contrastado con los datos. |
+
+Las referencias completas, con enlace, están en `src/gaps.js` (números 26 a 39) y se muestran en Proyecto → Brechas → Frontera científica.
+
 ## Para ampliar
 Buscar en Scopus/Scholar: Vuille et al. (2015, 2018); Aybar et al. (2020, PISCO); Fernandez-Palomino et al. (2021, RAIN4PE); Hamed & Rao (1998); boletines de sequía de SENAMHI; estudios de CENEPRED sobre déficit hídrico 2026-2027.
 

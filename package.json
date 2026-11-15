@@ -7,10 +7,14 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "datos": "node scripts/descargar-datos.mjs"
   },
   "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource-variable/plus-jakarta-sans": "^5.3.0",
     "@gsap/react": "^2.1.2",
+    "@hookform/resolvers": "^7.0.6",
     "@hugeicons/core-free-icons": "^4.4.0",
     "@hugeicons/react": "^1.1.10",
     "@mantine/core": "^7.17.0",
@@ -27,6 +31,7 @@
     "@visx/scale": "^4.0.0",
     "@visx/shape": "^4.0.0",
     "canvas-confetti": "^1.9.4",
+    "cesium": "^1.147.0",
     "d3": "^7.9.2",
     "echarts": "^6.1.0",
     "framer-motion": "^11.18.0",
@@ -38,11 +43,13 @@
     "prop-types": "^15.8.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-globe.gl": "^2.27.0",
+    "react-hook-form": "^7.92.0",
     "react-plotly.js": "^4.1.0",
     "scichart": "^6.0.16",
     "topojson-client": "^3.1.0",
+    "vite-plugin-static-copy": "^2.3.2",
     "world-atlas": "^2.0.2",
+    "zod": "^4.6.7",
     "zustand": "^5.0.0"
   },
   "devDependencies": {
