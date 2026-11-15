@@ -4,11 +4,13 @@
    mode="lakes"   lagos del Perú: inventario, imágenes por año y comparación de dos años con cortina */
 import { useEffect, useRef, useState } from 'react';
 import { Button, Select, Slider, Switch, SegmentedControl } from '@mantine/core';
-import { IconFlask, IconPlus, IconMinus, IconHandFinger, IconWorld, IconWifiOff, IconExternalLink, IconX, IconArrowsHorizontal, IconTags, IconRotate360, IconFlag } from '@tabler/icons-react';
+import { IconFlask, IconPlus, IconMinus, IconHandFinger, IconWorld, IconWifiOff, IconExternalLink, IconX, IconArrowsHorizontal, IconTags, IconRotate360, IconFlag, IconCamera } from '@tabler/icons-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as C from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import { mesh, feature } from 'topojson-client';
+import { addNames } from './names';
+import { takePhoto } from './photo';
 import { geoArea, geoBounds, geoCentroid, geoContains } from 'd3';
 import world from '../../lib/geo/world110.json';
 import peru from '../../lib/geo/peru.json';
@@ -20,7 +22,7 @@ import { useT } from '../../core/i18n';
 
 const col = (c, a = 1) => C.Color.fromCssColorString(c).withAlpha(a);
 const CREDIT = 'NASA GIBS / EOSDIS';
-function provider(def, date, onErr) {
+export function provider(def, date, onErr) {
   const p = def.lvl
     ? new C.UrlTemplateImageryProvider({ url: tileUrl(def, date), maximumLevel: def.lvl, credit: CREDIT })
     : new C.WebMapServiceImageryProvider({ url: GIBS_WMS, layers: def.layer, parameters: { transparent: true, format: 'image/png', time: date }, enablePickFeatures: false, maximumLevel: 11, credit: CREDIT });
@@ -50,6 +52,7 @@ export default function EarthView({ mode = 'hero', points, uncovered, alerts }) 
   const [year, setYear] = useState(LASTY), [year2, setYear2] = useState(2001), [compare, setCompare] = useState(false), [pos, setPos] = useState(0.5);
   const [labelsOn, setLabelsOn] = useState(true), [spinOn, setSpinOn] = useState(mode !== 'lakes'), [country, setCountry] = useState(null), langR = useRef(lang);
   langR.current = lang;
+  const [flash, setFlash] = useState(false);
   const [evOn, setEvOn] = useState(false), [evState, setEvState] = useState(null), [ev, setEv] = useState(null);
   const def = layerById(layerId), FAR = mode === 'explore' ? 2.25e7 : 1.15e7; // altura inicial de la cámara
 
@@ -59,7 +62,7 @@ export default function EarthView({ mode = 'hero', points, uncovered, alerts }) 
     try {
       v = new C.Viewer(el.current, {
         animation: false, timeline: false, baseLayerPicker: false, geocoder: false, homeButton: false, sceneModePicker: false, navigationHelpButton: false, fullscreenButton: false, infoBox: false, selectionIndicator: false,
-        scene3DOnly: true, skyBox: false, showRenderLoopErrors: false,
+        scene3DOnly: true, skyBox: false, showRenderLoopErrors: false, contextOptions: { webgl: { preserveDrawingBuffer: true } },
         baseLayer: C.ImageryLayer.fromProviderAsync(C.TileMapServiceImageryProvider.fromUrl(C.buildModuleUrl('Assets/Textures/NaturalEarthII'))),
       });
     } catch (e) { console.warn('Cesium', e); setDead(true); return undefined; }
@@ -120,6 +123,7 @@ export default function EarthView({ mode = 'hero', points, uncovered, alerts }) 
     if (labelsOn) {
       const far = mode === 'hero' ? [3.6e7, 1.3e7, 5.5e6, 2.2e6] : [3.6e7, 1.8e7, 8e6, 3.5e6], fs = mode === 'hero' ? 11 : 13;
       COUNTRIES.forEach((c) => { const T = tier(c.area); d.entities.add({ position: C.Cartesian3.fromDegrees(c.c[0], c.c[1]), label: { text: cname(c, lang).toUpperCase(), font: `${T === 0 ? 700 : 600} ${fs - (T > 1 ? 1 : 0)}px Inter, sans-serif`, fillColor: col('#14213d', 0.92), outlineColor: col('#ffffff', 0.9), outlineWidth: 3, style: C.LabelStyle.FILL_AND_OUTLINE, distanceDisplayCondition: new C.DistanceDisplayCondition(0, far[T]), scaleByDistance: new C.NearFarScalar(1.5e6, 1.25, 2.5e7, 0.75), horizontalOrigin: C.HorizontalOrigin.CENTER, verticalOrigin: C.VerticalOrigin.CENTER } }); });
+      addNames(C, d, lang, mode === 'hero' ? 'hero' : 'full');
     }
     V.current.scene.requestRender();
   }, [ready, lang, labelsOn]);
@@ -183,6 +187,13 @@ export default function EarthView({ mode = 'hero', points, uncovered, alerts }) 
     return () => { dead2 = true; };
   }, [ready, evOn, lang]);
 
+  const photo = () => {
+    const v = V.current, cp = v?.camera.positionCartographic; if (!v) return;
+    const lyr = mode === 'lakes' ? (layerId === 'base' ? L('Mapa de lagos del Perú', 'Map of Peru’s lakes') : `${def[lang][0]} · ${compare ? `${year2} ${L('frente a', 'vs')} ${year}` : year}`) : `${def[lang][0]}${def.fixed ? '' : ' · ' + date}`;
+    const lk = mode === 'lakes' ? lakes.find((x) => x.id === lake) : null;
+    takePhoto(v, { title: mode === 'lakes' ? L('Lagos del Perú desde el espacio', 'Peru’s lakes from space') : L('Planeta Tierra', 'Planet Earth'), lines: [lyr, mode === 'lakes' ? (lk ? `${lk.name} · ${lk.lat.toFixed(2)}°, ${lk.lon.toFixed(2)}°` : '') : `${L('Lugar elegido', 'Chosen place')}: ${placeLabel(place, PLACES, lang)} (${place.lat}°, ${place.lon}°)`, cp ? `${L('Altura de la cámara', 'Camera height')}: ${Math.round(cp.height / 1000).toLocaleString(lang)} km` : ''].filter(Boolean), credit: `${L('Imágenes', 'Imagery')}: NASA GIBS / EOSDIS`, file: 'terrascope-planeta' });
+    setFlash(true); setTimeout(() => setFlash(false), 450);
+  };
   const drag = (e) => { const r = box.current.getBoundingClientRect(); const mv = (x) => setPos(Math.max(0.05, Math.min(0.95, (x - r.left) / r.width))); const onM = (m) => mv(m.clientX), up = () => { window.removeEventListener('pointermove', onM); window.removeEventListener('pointerup', up); }; window.addEventListener('pointermove', onM); window.addEventListener('pointerup', up); mv(e.clientX); };
   if (dead) throw new Error('WebGL no disponible');
   const lk = [['base', L('Mapa', 'Map')], ['tc', L('Color real', 'True color')], ['fc', L('Agua en negro', 'Water in black')]];
@@ -206,11 +217,12 @@ export default function EarthView({ mode = 'hero', points, uncovered, alerts }) 
       )}
       <div ref={box} className={'earth earth-' + mode}>
         <div ref={el} className="earthcanvas" />
+        {flash && <div className="snapflash" />}
         {compare && layerId !== 'base' && mode === 'lakes' && (<>
           <div className="splitbar" style={{ left: `${pos * 100}%` }} onPointerDown={drag}><i><IconArrowsHorizontal size={16} /></i></div>
           <span className="splitlab" style={{ left: 12 }}>{year2}</span><span className="splitlab" style={{ right: 60 }}>{year}</span>
         </>)}
-        <div className="gzoom"><button onClick={() => zoom(0.5)} aria-label="zoom in"><IconPlus size={18} /></button><button onClick={() => zoom(2)} aria-label="zoom out"><IconMinus size={18} /></button><button onClick={home} aria-label="home"><IconWorld size={18} /></button><button className={labelsOn ? 'on' : ''} onClick={() => setLabelsOn((x) => !x)} aria-label={L('Nombres de países', 'Country names')} title={L('Nombres de países', 'Country names')}><IconTags size={18} /></button><button className={spinOn ? 'on' : ''} onClick={() => { spin.current = !spin.current; setSpinOn(spin.current); }} aria-label={L('Girar solo', 'Auto-rotate')} title={L('Girar solo', 'Auto-rotate')}><IconRotate360 size={18} /></button></div>
+        <div className="gzoom"><button onClick={() => zoom(0.5)} aria-label="zoom in"><IconPlus size={18} /></button><button onClick={() => zoom(2)} aria-label="zoom out"><IconMinus size={18} /></button><button onClick={home} aria-label="home"><IconWorld size={18} /></button><button className={labelsOn ? 'on' : ''} onClick={() => setLabelsOn((x) => !x)} aria-label={L('Nombres de países', 'Country names')} title={L('Nombres de países', 'Country names')}><IconTags size={18} /></button><button onClick={photo} aria-label={L('Tomar foto del planeta', 'Take a photo of the planet')} title={L('Tomar foto del planeta (PNG)', 'Take a photo of the planet (PNG)')}><IconCamera size={18} /></button><button className={spinOn ? 'on' : ''} onClick={() => { spin.current = !spin.current; setSpinOn(spin.current); }} aria-label={L('Girar solo', 'Auto-rotate')} title={L('Girar solo', 'Auto-rotate')}><IconRotate360 size={18} /></button></div>
         {tip && <div className="gtip earthtip" style={{ left: tip.x + 12, top: tip.y + 12 }}>{tip.name}{tip.sub && <small>{tip.sub}</small>}</div>}
         {!net && <div className="earthnote"><IconWifiOff size={15} /> {L('No se pudo cargar esta capa (sin internet o sin imagen para esa fecha). Ves el relieve incluido.', 'This layer could not load (offline or no image for that date). You see the built-in relief.')}</div>}
         {mode === 'hero' && <div className="hint light"><IconHandFinger size={15} /> {L('Gira, acerca y toca cualquier país o punto del planeta; doble toque para volar a un país', 'Spin, zoom and tap any country or point; double-tap to fly to a country')}</div>}
