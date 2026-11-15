@@ -43,9 +43,9 @@ function Globe({ pl, layerId, photoYear, compareYear, split, pos, color, intensi
     } catch (e) { console.warn('Cesium', e); return undefined; }
     Vw.current = v; const sc = v.scene;
     sc.backgroundColor = col('#050b1c'); sc.globe.baseColor = col('#0b2a4a'); if (sc.sun) sc.sun.show = false; if (sc.moon) sc.moon.show = false;
-    sc.globe.enableLighting = false; sc.fog.enabled = false; sc.globe.showGroundAtmosphere = true; sc.skyAtmosphere.show = true;
+    sc.globe.enableLighting = false; sc.fog.enabled = false; sc.globe.showGroundAtmosphere = false; sc.skyAtmosphere.show = true;
     sc.screenSpaceCameraController.minimumZoomDistance = 8000; sc.screenSpaceCameraController.maximumZoomDistance = 3.6e7;
-    if (window.innerWidth > 720) { v.useBrowserRecommendedResolution = false; v.resolutionScale = Math.min(window.devicePixelRatio || 1, 1.5); }
+    sc.requestRenderMode = true; sc.maximumRenderTimeChange = Number.POSITIVE_INFINITY; // solo dibuja cuando algo cambia: mucho más fluido
     v.cesiumWidget.screenSpaceEventHandler.removeInputAction(C.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
     const bm = v.imageryLayers.addImageryProvider(provider(layerById('base'), '', () => {})); bm.brightness = 1.05;
     ds.current = { heat: new C.CustomDataSource('heat'), b: new C.CustomDataSource('b'), l: new C.CustomDataSource('l') };
@@ -63,29 +63,47 @@ function Globe({ pl, layerId, photoYear, compareYear, split, pos, color, intensi
     COUNTRIES.forEach((c) => { const T = tier(c.area); d.entities.add({ position: C.Cartesian3.fromDegrees(c.c[0], c.c[1]), label: { text: cname(c, lang).toUpperCase(), font: `${T === 0 ? 700 : 600} ${T > 1 ? 11 : 12}px Inter, sans-serif`, fillColor: col('#ffffff', 0.96), outlineColor: col('#0b1630', 0.85), outlineWidth: 3, style: C.LabelStyle.FILL_AND_OUTLINE, distanceDisplayCondition: new C.DistanceDisplayCondition(0, [2.4e7, 1.2e7, 5e6, 2.2e6][T]), scaleByDistance: new C.NearFarScalar(1.5e6, 1.25, 2.5e7, 0.75) } }); });
     addNames(C, d, lang, 'full'); v.scene.requestRender();
   }, [ready, lang, names]);
-  /* foto satelital real de la NASA (o capa elegida) */
+  /* foto satelital real de la NASA (o capa elegida): fundido suave entre años, sin cortes */
+  const fade = useRef({ tok: 0, off: null });
   useEffect(() => {
-    const v = Vw.current; if (!ready || !v) return; const t = setTimeout(() => { // espera a que el control de año se detenga
-      lyr.current.forEach((l) => v.imageryLayers.remove(l, true)); lyr.current = []; errs.current = 0; setNet(true);
-      const def = layerById(layerId); if (layerId === 'base') { v.scene.splitPosition = 0.5; v.scene.requestRender(); return; }
-      const onErr = () => { errs.current += 1; if (errs.current === 8) setNet(false); };
-      const add = (y, dir) => { const l = v.imageryLayers.addImageryProvider(provider(def, def.fixed ? '' : `${y}-07-15`, onErr)); if (def.over) l.alpha = 0.88; if (dir != null) l.splitDirection = dir; lyr.current.push(l); };
-      if (split && !def.fixed) { add(compareYear, C.SplitDirection.LEFT); add(photoYear, C.SplitDirection.RIGHT); } else add(photoYear);
-      v.scene.requestRender();
-    }, 220);
+    const v = Vw.current; if (!ready || !v) return; const sc = v.scene, F = fade.current, tok = ++F.tok;
+    if (F.off) { F.off(); F.off = null; }
+    const t = setTimeout(() => { // espera a que el control de año se detenga
+      const def = layerById(layerId), tgt = def.over ? 0.88 : 1, onErr = () => { errs.current += 1; if (errs.current === 8) setNet(false); };
+      errs.current = 0; setNet(true);
+      const drop = (keep) => { lyr.current.filter((l) => l !== keep).forEach((l) => v.imageryLayers.remove(l, true)); lyr.current = keep ? [keep] : []; };
+      const mk = (y, dir, a) => { const l = v.imageryLayers.addImageryProvider(provider(def, def.fixed ? '' : `${y}-07-15`, onErr)); if (def.id === 'tc') { l.colorToAlpha = C.Color.BLACK; l.colorToAlphaThreshold = 0.06; } /* las franjas negras sin datos del satélite quedan transparentes */ l.alpha = a; if (dir != null) l.splitDirection = dir; lyr.current.push(l); return l; };
+      if (layerId === 'base') { drop(null); sc.requestRender(); return; }
+      if (split && !def.fixed) { drop(null); mk(compareYear, C.SplitDirection.LEFT, tgt); mk(photoYear, C.SplitDirection.RIGHT, tgt); sc.requestRender(); return; }
+      if (!lyr.current.length) { mk(photoYear, null, tgt); sc.requestRender(); return; }
+      const nl = mk(photoYear, null, 0.001), t0 = performance.now(); let started = false, tm;
+      const go = () => { if (started || F.tok !== tok) return; started = true; clearTimeout(tm); if (F.off) { F.off(); F.off = null; }
+        const a0 = performance.now(), step = (now) => { if (F.tok !== tok) return; const k = Math.min(1, (now - a0) / 500), e = k * k * (3 - 2 * k); nl.alpha = 0.001 + (tgt - 0.001) * e; sc.requestRender(); if (k < 1) requestAnimationFrame(step); else drop(nl); };
+        requestAnimationFrame(step); };
+      F.off = sc.globe.tileLoadProgressEvent.addEventListener((n) => { if (n === 0 && performance.now() - t0 > 450) go(); });
+      tm = setTimeout(go, 2200);
+    }, 160);
     return () => clearTimeout(t);
   }, [ready, layerId, photoYear, compareYear, split]);
   useEffect(() => { const v = Vw.current; if (ready && v) { v.scene.splitPosition = pos; v.scene.requestRender(); } }, [ready, pos, split]);
-  /* halo de calor: el cambio se pinta sobre el propio planeta */
+  /* halo de calor: el cambio se pinta sobre el propio planeta y se anima hacia el nuevo valor */
+  const H = useRef({ r: 2e5, a: 0.4, tr: 2e5, ta: 0.4, raf: 0, hex: null, ent: null, pt: null });
   useEffect(() => {
-    const d = ds.current?.heat, v = Vw.current; if (!ready || !d) return; d.entities.removeAll();
-    if (showHeat) {
-      const p = C.Cartesian3.fromDegrees(pl.lon, pl.lat), k = Math.max(0.12, Math.min(1, intensity)), r = 160000 + 650000 * k;
-      d.entities.add({ position: p, ellipse: { semiMajorAxis: r, semiMinorAxis: r, height: 0, material: new C.ImageMaterialProperty({ image: heatImg(color), transparent: true, color: C.Color.WHITE.withAlpha(0.35 + 0.6 * k) }) } });
+    const d = ds.current?.heat, v = Vw.current, h = H.current; if (!ready || !d) return;
+    const k = Math.max(0.12, Math.min(1, intensity)); h.tr = 160000 + 650000 * k; h.ta = 0.35 + 0.6 * k;
+    const p = C.Cartesian3.fromDegrees(pl.lon, pl.lat);
+    if (!h.ent || h.hex !== color) {
+      if (h.ent) d.entities.remove(h.ent); h.hex = color;
+      h.ent = d.entities.add({ position: p, ellipse: { semiMajorAxis: new C.CallbackProperty(() => h.r, false), semiMinorAxis: new C.CallbackProperty(() => h.r, false), height: 0, material: new C.ImageMaterialProperty({ image: heatImg(color), transparent: true, color: new C.CallbackProperty(() => C.Color.WHITE.withAlpha(h.a), false) }) } });
     }
-    d.entities.add({ position: C.Cartesian3.fromDegrees(pl.lon, pl.lat), point: { pixelSize: 11, color: col(color), outlineColor: C.Color.WHITE, outlineWidth: 2.5, disableDepthTestDistance: Number.POSITIVE_INFINITY }, label: { text: label, font: '700 15px Inter, sans-serif', fillColor: C.Color.WHITE, outlineColor: col('#0b1630'), outlineWidth: 5, style: C.LabelStyle.FILL_AND_OUTLINE, pixelOffset: new C.Cartesian2(0, -28), disableDepthTestDistance: Number.POSITIVE_INFINITY } });
+    h.ent.show = !!showHeat;
+    if (!h.pt) h.pt = d.entities.add({ position: p, point: { pixelSize: 11, color: col(color), outlineColor: C.Color.WHITE, outlineWidth: 2.5, disableDepthTestDistance: Number.POSITIVE_INFINITY }, label: { text: label, font: '700 15px Inter, sans-serif', fillColor: C.Color.WHITE, outlineColor: col('#0b1630'), outlineWidth: 5, style: C.LabelStyle.FILL_AND_OUTLINE, pixelOffset: new C.Cartesian2(0, -28), disableDepthTestDistance: Number.POSITIVE_INFINITY } });
+    else { h.pt.point.color = col(color); h.pt.label.text = label; }
+    if (!h.raf) { const step = () => { h.r += (h.tr - h.r) * 0.1; h.a += (h.ta - h.a) * 0.1; v.scene.requestRender();
+      if (Math.abs(h.tr - h.r) > 800 || Math.abs(h.ta - h.a) > 0.005) h.raf = requestAnimationFrame(step); else { h.r = h.tr; h.a = h.ta; h.raf = 0; } }; h.raf = requestAnimationFrame(step); }
     v.scene.requestRender();
   }, [ready, color, intensity, label, showHeat, pl.lat, pl.lon]);
+  useEffect(() => () => { const h = H.current; cancelAnimationFrame(h.raf); h.raf = 0; h.ent = null; h.pt = null; h.hex = null; }, []);
   return (<>
     <div ref={el} className="f50globe" />
     {flash && <div className="snapflash" />}
@@ -129,7 +147,7 @@ export default function Planet2050({ cur, res, pname, L, lang }) {
   const sg = (x) => `${x > 0 ? '+' : ''}${x.toFixed(d)}`;
   const photoYear = Math.min(LASTY, Math.max(2001, yr)), future = !row.real;
   const photoDate = layerById(layerId).fixed ? null : `15 ${L('jul', 'Jul')} ${photoYear}`;
-  useEffect(() => { if (!play) return undefined; const t = setInterval(() => setYear((y) => { if (y >= y1) { setPlay(false); return y1; } return y + 1; }), 650); return () => clearInterval(t); }, [play, y1]);
+  useEffect(() => { if (!play) return undefined; const t = setInterval(() => setYear((y) => { if (y >= y1) { setPlay(false); return y1; } return y + 1; }), 1300); return () => clearInterval(t); }, [play, y1]);
   const start = () => { if (yr >= y1) setYear(y0); setPlay((p) => !p); };
   const mlab = { 0: L('Se detiene', 'Stops'), 1: L('Sigue igual', 'Continues'), 2: L('Se duplica', 'Doubles') };
   const hasGL = useMemo(() => { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch { return false; } }, []);
