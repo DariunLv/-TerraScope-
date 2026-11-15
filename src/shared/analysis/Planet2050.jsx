@@ -71,14 +71,14 @@ function Globe({ pl, layerId, photoYear, compareYear, split, pos, color, intensi
     const t = setTimeout(() => { // espera a que el control de año se detenga
       const def = layerById(layerId), tgt = def.over ? 0.88 : 1, onErr = () => { errs.current += 1; if (errs.current === 8) setNet(false); };
       errs.current = 0; setNet(true);
-      const drop = (keep) => { lyr.current.filter((l) => l !== keep).forEach((l) => v.imageryLayers.remove(l, true)); lyr.current = keep ? [keep] : []; };
-      const mk = (y, dir, a) => { const l = v.imageryLayers.addImageryProvider(provider(def, def.fixed ? '' : `${y}-07-15`, onErr)); if (def.id === 'tc') { l.colorToAlpha = C.Color.BLACK; l.colorToAlphaThreshold = 0.06; } /* las franjas negras sin datos del satélite quedan transparentes */ l.alpha = a; if (dir != null) l.splitDirection = dir; lyr.current.push(l); return l; };
+      const drop = (keep) => { lyr.current.filter((l) => !keep || !keep.includes(l)).forEach((l) => v.imageryLayers.remove(l, true)); lyr.current = keep ? [...keep] : []; };
+      const mk = (y, dir, a) => { /* foto diaria: el satélite deja franjas sin datos; se apilan los 2 días anteriores debajo para rellenarlas */ const days = def.id === 'tc' ? [13, 14, 15] : [15], out = days.map((dd) => { const l = v.imageryLayers.addImageryProvider(provider(def, def.fixed ? '' : `${y}-07-${dd}`, onErr)); if (def.id === 'tc') { l.colorToAlpha = C.Color.BLACK; l.colorToAlphaThreshold = 0.12; } l.alpha = a; if (dir != null) l.splitDirection = dir; lyr.current.push(l); return l; }); return out; };
       if (layerId === 'base') { drop(null); sc.requestRender(); return; }
       if (split && !def.fixed) { drop(null); mk(compareYear, C.SplitDirection.LEFT, tgt); mk(photoYear, C.SplitDirection.RIGHT, tgt); sc.requestRender(); return; }
       if (!lyr.current.length) { mk(photoYear, null, tgt); sc.requestRender(); return; }
       const nl = mk(photoYear, null, 0.001), t0 = performance.now(); let started = false, tm;
       const go = () => { if (started || F.tok !== tok) return; started = true; clearTimeout(tm); if (F.off) { F.off(); F.off = null; }
-        const a0 = performance.now(), step = (now) => { if (F.tok !== tok) return; const k = Math.min(1, (now - a0) / 500), e = k * k * (3 - 2 * k); nl.alpha = 0.001 + (tgt - 0.001) * e; sc.requestRender(); if (k < 1) requestAnimationFrame(step); else drop(nl); };
+        const a0 = performance.now(), step = (now) => { if (F.tok !== tok) return; const k = Math.min(1, (now - a0) / 500), e = k * k * (3 - 2 * k); nl.forEach((l) => { l.alpha = 0.001 + (tgt - 0.001) * e; }); sc.requestRender(); if (k < 1) requestAnimationFrame(step); else drop(nl); };
         requestAnimationFrame(step); };
       F.off = sc.globe.tileLoadProgressEvent.addEventListener((n) => { if (n === 0 && performance.now() - t0 > 450) go(); });
       tm = setTimeout(go, 2200);
