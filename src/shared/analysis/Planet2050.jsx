@@ -10,7 +10,7 @@ import 'cesium/Build/Cesium/Widgets/widgets.css';
 import { mesh } from 'topojson-client';
 import world from '../../lib/geo/world110.json';
 import { V, sourceOf } from '../../lib/nasa/data';
-import { layerById } from '../../lib/nasa/nasa';
+import { layerById as gibs } from '../../lib/nasa/nasa';
 import { isTemp } from '../../lib/analysis/viz';
 import * as I from '../../lib/analysis/intel';
 import { COUNTRIES, cname, tier, provider } from '../earth/EarthView';
@@ -21,6 +21,16 @@ import Interpret from '../Interpret';
 const col = (c, a = 1) => C.Color.fromCssColorString(c).withAlpha(a);
 const WARM = '#c2410c', COOL = '#1e40af', NOW = new Date(), LASTY = NOW.getUTCFullYear() - (NOW.getUTCMonth() < 7 ? 1 : 0); // último año con foto de julio
 const mean = (a) => a.reduce((s, x) => s + x, 0) / Math.max(1, a.length);
+/* Capas del planeta. Las de cobertura global (relieve, vegetación y temperatura mensuales, luces nocturnas) no tienen franjas ni costuras;
+   la foto diaria de MODIS sí las tiene (el satélite pasa por franjas), por eso solo se ofrece como zona alrededor del lugar. */
+const DEFS = {
+  base: { ...gibs('base'), es: ['Planeta (relieve NASA)', ''], en: ['Planet (NASA relief)', ''] },
+  veg: { id: 'veg', layer: 'MODIS_Terra_L3_NDVI_Monthly', lvl: 7, ext: 'png', over: true, es: ['Vegetación (NDVI de julio)', ''], en: ['Vegetation (July NDVI)', ''] },
+  lst: { id: 'lst', layer: 'MODIS_Terra_L3_Land_Surface_Temp_Monthly_Day', lvl: 7, ext: 'png', over: true, es: ['Temperatura del suelo (julio)', ''], en: ['Land surface temperature (July)', ''] },
+  night: gibs('night'),
+  tc: { ...gibs('tc'), es: ['Foto diaria MODIS (zona)', ''], en: ['MODIS daily photo (area)', ''] },
+};
+const layerById = (id) => DEFS[id] || DEFS.base;
 const heatCache = {};
 const heatImg = (hex) => { // degradado radial: el centro es el más intenso y se funde con la foto
   if (heatCache[hex]) return heatCache[hex];
@@ -50,7 +60,7 @@ function Globe({ pl, layerId, photoYear, compareYear, split, pos, color, intensi
     const bm = v.imageryLayers.addImageryProvider(provider(layerById('base'), '', () => {})); bm.brightness = 1.05;
     ds.current = { heat: new C.CustomDataSource('heat'), b: new C.CustomDataSource('b'), l: new C.CustomDataSource('l') };
     ['b', 'l', 'heat'].forEach((n) => v.dataSources.add(ds.current[n]));
-    mesh(world, world.objects.countries).coordinates.forEach((line) => { if (line.length > 1) ds.current.b.entities.add({ polyline: { positions: C.Cartesian3.fromDegreesArray(line.flat()), width: 1, material: col('#ffffff', 0.5) } }); });
+    mesh(world, world.objects.countries).coordinates.forEach((line) => { if (line.length > 1) ds.current.b.entities.add({ polyline: { positions: C.Cartesian3.fromDegreesArray(line.flat()), width: 1, material: col('#ffffff', 0.28) } }); });
     v.camera.setView({ destination: C.Cartesian3.fromDegrees(pl.lon, pl.lat, 1.2e7) });
     const fly = (dest, dur) => { v.camera.cancelFlight(); let on = true; const pump = () => { if (!on) return; sc.requestRender(); requestAnimationFrame(pump); }; pump(); v.camera.flyTo({ destination: dest, duration: dur, complete: () => { on = false; sc.requestRender(); }, cancel: () => { on = false; } }); };
     fly(C.Cartesian3.fromDegrees(pl.lon, pl.lat, 2.6e6), 2.6);
@@ -73,7 +83,7 @@ function Globe({ pl, layerId, photoYear, compareYear, split, pos, color, intensi
       const def = layerById(layerId), tgt = def.over ? 0.88 : 1, onErr = () => { errs.current += 1; if (errs.current === 8) setNet(false); };
       errs.current = 0; setNet(true);
       const zone = C.Rectangle.fromDegrees(Math.max(-180, pl.lon - 34), Math.max(-80, pl.lat - 24), Math.min(180, pl.lon + 34), Math.min(80, pl.lat + 24)), drop = (keep) => { lyr.current.filter((l) => !keep || !keep.includes(l)).forEach((l) => v.imageryLayers.remove(l, true)); lyr.current = keep ? [...keep] : []; };
-      const mk = (y, dir, a) => { /* foto diaria: el satélite deja franjas sin datos; se apilan los 2 días anteriores debajo para rellenarlas */ const days = def.id === 'tc' ? [13, 14, 15] : [15], out = days.map((dd) => { const l = v.imageryLayers.addImageryProvider(provider(def, def.fixed ? '' : `${y}-07-${dd}`, onErr, def.fixed ? undefined : zone)); if (def.id === 'tc') { l.colorToAlpha = C.Color.BLACK; l.colorToAlphaThreshold = 0.12; } l.alpha = a; if (dir != null) l.splitDirection = dir; lyr.current.push(l); return l; }); return out; };
+      const mk = (y, dir, a) => { /* foto diaria: el satélite deja franjas sin datos; se apilan los 2 días anteriores debajo para rellenarlas */ const days = def.id === 'tc' ? [13, 14, 15] : [1], out = days.map((dd) => { const l = v.imageryLayers.addImageryProvider(provider(def, def.fixed ? '' : `${y}-07-${String(dd).padStart(2, '0')}`, onErr, def.id === 'tc' ? zone : undefined)); if (def.id === 'tc') { l.colorToAlpha = C.Color.BLACK; l.colorToAlphaThreshold = 0.12; } l.alpha = a; if (dir != null) l.splitDirection = dir; lyr.current.push(l); return l; }); return out; };
       if (layerId === 'base') { drop(null); sc.requestRender(); return; }
       if (split && !def.fixed) { drop(null); mk(compareYear, C.SplitDirection.LEFT, tgt); mk(photoYear, C.SplitDirection.RIGHT, tgt); sc.requestRender(); return; }
       if (!lyr.current.length) { mk(photoYear, null, tgt); sc.requestRender(); return; }
@@ -134,7 +144,7 @@ function Thermo({ lo, hi, val, q05, q95, base, color, unit, d, hoy }) {
 export default function Planet2050({ cur, res, pname, L, lang }) {
   const k = cur.k, u = V[k].u, d = V[k].d, pts = useMemo(() => I.fillGaps(cur.raw).pts, [cur]);
   const lastYear = pts[pts.length - 1].year, yrs = Math.max(3, 2050 - lastYear);
-  const [mult, setMult] = useState(1), [year, setYear] = useState(2050), [play, setPlay] = useState(false), [layerId, setLayerId] = useState('tc'), [names, setNames] = useState(true), [split, setSplit] = useState(false), [pos, setPos] = useState(0.5);
+  const [mult, setMult] = useState(1), [year, setYear] = useState(2050), [play, setPlay] = useState(false), [layerId, setLayerId] = useState('veg'), [names, setNames] = useState(true), [split, setSplit] = useState(false), [pos, setPos] = useState(0.5);
   const snap = useRef(null);
   const S = useMemo(() => ({ 0: I.simulate(pts, { years: yrs, mult: 0, B: 250 }), 1: I.simulate(pts, { years: yrs, mult: 1, B: 300 }), 2: I.simulate(pts, { years: yrs, mult: 2, B: 250 }) }), [pts, yrs]);
   const hist = useMemo(() => { const m = new Map(); pts.forEach((p) => { const a = m.get(p.year) || [0, 0]; a[0] += p.v; a[1]++; m.set(p.year, a); }); return [...m.entries()].filter(([, a]) => a[1] === 12).map(([y, a]) => ({ year: y, v: a[0] / a[1] })); }, [pts]);
@@ -147,14 +157,14 @@ export default function Planet2050({ cur, res, pname, L, lang }) {
   const colorHex = color === '#64748b' ? '#64748b' : color;
   const sg = (x) => `${x > 0 ? '+' : ''}${x.toFixed(d)}`;
   const photoYear = Math.min(LASTY, Math.max(2001, yr)), future = !row.real;
-  const photoDate = layerById(layerId).fixed ? null : `15 ${L('jul', 'Jul')} ${photoYear}`;
+  const photoDate = layerById(layerId).fixed ? null : layerId === 'tc' ? `15 ${L('jul', 'Jul')} ${photoYear}` : `${L('jul', 'Jul')} ${photoYear}`;
   useEffect(() => { if (!play) return undefined; const t = setInterval(() => setYear((y) => { if (y >= y1) { setPlay(false); return y1; } return y + 1; }), 1300); return () => clearInterval(t); }, [play, y1]);
   const start = () => { if (yr >= y1) setYear(y0); setPlay((p) => !p); };
   const mlab = { 0: L('Se detiene', 'Stops'), 1: L('Sigue igual', 'Continues'), 2: L('Se duplica', 'Doubles') };
   const hasGL = useMemo(() => { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch { return false; } }, []);
   const label = `${yr}${future ? ' · ' + L('proyección', 'projection') : ''}: ${row.q50.toFixed(d)} ${u} (${sg(delta)})`;
   const photo = () => snap.current?.photo({ title: `${V[k][lang][0]} · ${pname}`, lines: [`${yr} · ${future ? L('proyección', 'projection') + ' ' + mlab[mult].toLowerCase() : L('dato observado', 'observed value')}: ${row.q50.toFixed(d)} ${u} (${sg(delta)} ${u} ${L('frente a hoy', 'vs today')})`, `${layerById(layerId)[lang][0]}${photoDate ? ' · ' + photoDate : ''}${future ? ' · ' + L('última foto real, con el cambio proyectado pintado encima', 'last real photo, with the projected change painted over it') : ''}`], credit: `${L('Imágenes', 'Imagery')}: NASA GIBS (MODIS) · ${L('Datos', 'Data')}: ${sourceOf(k)} · ${L('proyección condicionada, no predicción', 'conditional projection, not a forecast')}`, file: 'terrascope-planeta-' + yr });
-  const layers = [['tc', L('Foto real', 'Real photo')], ['lst', L('Temperatura', 'Temperature')], ['night', L('De noche', 'At night')], ['base', L('Relieve', 'Relief')]];
+  const layers = [['veg', L('Vegetación', 'Vegetation')], ['lst', L('Temperatura', 'Temperature')], ['base', L('Planeta', 'Planet')], ['night', L('De noche', 'At night')], ['tc', L('Foto diaria', 'Daily photo')]];
   return (<>
     <p className="sub">{L('El cambio se ve en el mismo planeta: los años pasados muestran la foto real de la NASA y los futuros pintan sobre ella lo que proyecta la serie. Mueve el año, cambia la capa o compara antes y después.', 'The change shows on the planet itself: past years show the real NASA photo and future years paint on it what the series projects. Move the year, switch layers or compare before and after.')}</p>
     <div className="f50">
@@ -163,7 +173,7 @@ export default function Planet2050({ cur, res, pname, L, lang }) {
         <div className="f50year"><span>{yr}</span><small>{pname}</small><em className={future ? 'fut' : 'real'}>{future ? L('PROYECCIÓN', 'PROJECTION') : L('DATO REAL', 'REAL DATA')}</em></div>
         <div className="gzoom"><button onClick={() => snap.current?.zoom(0.5)} aria-label="zoom in"><IconPlus size={18} /></button><button onClick={() => snap.current?.zoom(2)} aria-label="zoom out"><IconMinus size={18} /></button><button onClick={photo} aria-label={L('Tomar foto', 'Take photo')} title={L('Tomar foto con los datos (PNG)', 'Take a photo with the data (PNG)')}><IconCamera size={18} /></button><button className={names ? 'on' : ''} onClick={() => setNames((x) => !x)} aria-label={L('Nombres', 'Names')} title={L('Nombres de países, océanos y ciudades', 'Names of countries, oceans and cities')}><IconTags size={18} /></button></div>
         <div className="f50layers"><SegmentedControl size="xs" color="navy" value={layerId} onChange={setLayerId} data={layers.map(([value, label]) => ({ value, label }))} /></div>
-        {photoDate && <span className="f50cred">{L('Foto', 'Photo')}: NASA GIBS · MODIS · {photoDate}{future ? ' · ' + L('última disponible', 'latest available') : ''}</span>}
+        {photoDate && <span className="f50cred">{layerId === 'tc' ? L('Foto', 'Photo') : L('Imagen', 'Image')}: NASA GIBS · MODIS · {photoDate}{future ? ' · ' + L('última disponible', 'latest available') : ''}</span>}
       </div>
       <div className="f50t">
         <b className="f50h">{V[k][lang][0]}</b>
@@ -181,6 +191,6 @@ export default function Planet2050({ cur, res, pname, L, lang }) {
       {layerId !== 'base' && !layerById(layerId).fixed && <Switch color="navy" checked={split} onChange={(e) => setSplit(e.currentTarget.checked)} label={L(`Cortina: ${y0} frente a ${photoYear}`, `Curtain: ${y0} vs ${photoYear}`)} />}
     </div>
     <Interpret title={`${V[k][lang][0]} · ${yr}`} facts={`${V[k][lang][0]} en ${pname}: promedio de los últimos 5 años completos ${base.toFixed(d)} ${u}; ${future ? `proyección para ${yr} (tendencia ${mlab[mult].toLowerCase()}): valor central ${row.q50.toFixed(d)} ${u}, rango de 90 % de ${row.q05.toFixed(d)} a ${row.q95.toFixed(d)}` : `dato observado de ${yr}: ${row.q50.toFixed(d)} ${u}`}; cambio frente a hoy ${sg(delta)} ${u}; fuente ${sourceOf(k)}; serie hasta ${lastYear}`} how={L('Cómo se lee: el termómetro marca el valor anual; la franja suave es el rango de 90 % y la línea punteada el promedio actual. En el planeta, los años pasados muestran la foto real de ese año y el halo de color crece con el cambio.', 'How to read it: the thermometer marks the annual value; the soft band is the 90 % range and the dashed line is today’s average. On the planet, past years show that year’s real photo and the coloured halo grows with the change.')} plain={worse ? L('Qué dice aquí: bajo este supuesto la variable se mueve en sentido desfavorable respecto de hoy.', 'What it says here: under this assumption the variable moves in an unfavourable direction from today.') : L('Qué dice aquí: bajo este supuesto el cambio frente a hoy es pequeño o va en sentido favorable.', 'What it says here: under this assumption the change from today is small or favourable.')} next={L('Siguiente paso: compara “se detiene” con “se duplica” para ver cuánto depende el 2050 de que la tendencia continúe, y toma una foto para tu informe.', 'Next step: compare “stops” with “doubles” to see how much 2050 depends on the trend continuing, and take a photo for your report.')} />
-    <p className="mini"><IconInfoCircle size={13} style={{ verticalAlign: '-2px' }} /> {L('Las fotos son imágenes reales de la NASA (MODIS, 15 de julio de cada año). El halo de color de los años futuros NO es una foto: es la proyección del dato de este punto (una celda de unos 50 km) pintada sobre la última imagen real. Es una proyección condicionada, no una predicción, y no representa el clima de todo el planeta.', 'Photos are real NASA images (MODIS, 15 July of each year). The coloured halo for future years is NOT a photo: it is the projection of this point’s data (a cell of about 50 km) painted over the latest real image. It is a conditional projection, not a forecast, and does not represent the climate of the whole planet.')}</p>
+    <p className="mini"><IconInfoCircle size={13} style={{ verticalAlign: '-2px' }} /> {L('Las capas son imágenes de satélite de la NASA (MODIS, promedio mensual de julio de cada año; la foto diaria es del 15 de julio y solo cubre una zona). Para los años futuros no existen imágenes: el halo de color es la proyección del dato de este punto (una celda de unos 50 km) pintada sobre la última imagen real. Es una proyección condicionada, no una predicción, y no representa el clima de todo el planeta.', 'Layers are NASA satellite imagery (MODIS, July monthly mean of each year; the daily photo is from 15 July and covers one area only). No imagery exists for future years: the coloured halo is the projection of this point’s data (a cell of about 50 km) painted over the latest real image. It is a conditional projection, not a forecast, and does not represent the climate of the whole planet.')}</p>
   </>);
 }
