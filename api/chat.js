@@ -2,6 +2,7 @@
    Variables de entorno en Vercel: GROQ_API_KEY  (o)  GEMINI_API_KEY.  Opcionales: GROQ_MODEL, GEMINI_MODEL. */
 const hits = new Map();
 const limited = (ip) => { const now = Date.now(), a = (hits.get(ip) || []).filter((t) => now - t < 60000); a.push(now); hits.set(ip, a); if (hits.size > 5000) hits.clear(); return a.length > 20; };
+let good = null;
 const cut = (s, n) => String(s ?? '').slice(0, n);
 
 export default async function handler(req, res) {
@@ -15,9 +16,29 @@ export default async function handler(req, res) {
   if (!msgs.length) return res.status(400).json({ error: 'sin mensajes' });
   try {
     if (process.env.GROQ_API_KEY) {
-      const r = await fetch('https://api.groq.com/openai/v1/chat/completions', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${process.env.GROQ_API_KEY}` }, body: JSON.stringify({ model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile', temperature: 0.2, max_tokens: 500, messages: [{ role: 'system', content: system }, ...msgs] }) });
-      const j = await r.json(); if (!r.ok) return res.status(502).json({ error: cut(j?.error?.message || 'error del proveedor', 200) });
-      return res.status(200).json({ text: j.choices?.[0]?.message?.content?.trim() || '' });
+      const key = process.env.GROQ_API_KEY, H = { 'content-type': 'application/json', authorization: `Bearer ${key}` };
+      const ask = async (model) => {
+        const body = { model, temperature: 0.2, max_tokens: /gpt-oss/.test(model) ? 1200 : 500, messages: [{ role: 'system', content: system }, ...msgs] };
+        if (/gpt-oss/.test(model)) body.reasoning_effort = 'low';
+        const r = await fetch('https://api.groq.com/openai/v1/chat/completions', { method: 'POST', headers: H, body: JSON.stringify(body) });
+        const j = await r.json().catch(() => ({})); return { ok: r.ok, status: r.status, j };
+      };
+      let list = [good, process.env.GROQ_MODEL, 'llama-3.3-70b-versatile', 'openai/gpt-oss-20b', 'openai/gpt-oss-120b', 'llama-3.1-8b-instant'].filter(Boolean);
+      let last = null, tried = new Set();
+      for (let pass = 0; pass < 2; pass++) {
+        for (const m of list) {
+          if (tried.has(m)) continue; tried.add(m);
+          const o = await ask(m); last = o;
+          if (o.ok) { const t = o.j.choices?.[0]?.message?.content?.trim(); if (t) { good = m; return res.status(200).json({ text: t, model: m }); } continue; }
+          if (o.status === 401) return res.status(502).json({ error: 'la clave de Groq no es válida' });
+          if (o.status === 429) return res.status(502).json({ error: 'límite gratuito de Groq alcanzado, espera un momento' });
+        }
+        if (pass === 0) { // descubrir los modelos de chat que sí tiene esta cuenta
+          const mr = await fetch('https://api.groq.com/openai/v1/models', { headers: H }).then((x) => x.json()).catch(() => ({}));
+          list = (mr.data || []).map((x) => x.id).filter((id) => !/whisper|guard|tts|playai|orpheus|distil|embed|safeguard|compound/i.test(id)).sort((x, y) => (/70b|120b|gpt-oss|llama-4/i.test(y) ? 1 : 0) - (/70b|120b|gpt-oss|llama-4/i.test(x) ? 1 : 0));
+        }
+      }
+      return res.status(502).json({ error: cut(last?.j?.error?.message || 'ningún modelo de Groq respondió', 200) });
     }
     if (process.env.GEMINI_API_KEY) {
       const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
