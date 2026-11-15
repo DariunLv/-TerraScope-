@@ -4,11 +4,12 @@
    mode="lakes"   lagos del Perú: inventario, imágenes por año y comparación de dos años con cortina */
 import { useEffect, useRef, useState } from 'react';
 import { Button, Select, Slider, Switch, SegmentedControl } from '@mantine/core';
-import { IconFlask, IconPlus, IconMinus, IconHandFinger, IconWorld, IconWifiOff, IconExternalLink, IconX, IconArrowsHorizontal } from '@tabler/icons-react';
+import { IconFlask, IconPlus, IconMinus, IconHandFinger, IconWorld, IconWifiOff, IconExternalLink, IconX, IconArrowsHorizontal, IconTags, IconRotate360, IconFlag } from '@tabler/icons-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as C from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
-import { mesh } from 'topojson-client';
+import { mesh, feature } from 'topojson-client';
+import { geoArea, geoBounds, geoCentroid, geoContains } from 'd3';
 import world from '../../lib/geo/world110.json';
 import peru from '../../lib/geo/peru.json';
 import { PLACES } from '../../lib/nasa/data';
@@ -27,6 +28,17 @@ function provider(def, date, onErr) {
   return p;
 }
 const rings = (g) => (g.type === 'Polygon' ? g.coordinates : g.type === 'MultiPolygon' ? g.coordinates.flat() : []);
+/* ---- países: nombre, centro, tamaño y límites (calculados una sola vez) ---- */
+export const COUNTRIES = feature(world, world.objects.countries).features.map((f) => {
+  const polys = f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates;
+  let best = polys[0], ba = -1; polys.forEach((p) => { const a = geoArea({ type: 'Polygon', coordinates: p }); if (a > ba) { ba = a; best = p; } });
+  const bp = { type: 'Polygon', coordinates: best };
+  return { id: String(f.id), en: f.properties.name, area: geoArea(f), c: geoCentroid(bp), b: geoBounds(bp), bb: geoBounds(f), polys, f };
+});
+const DN = {};
+export const cname = (c, lang) => { if (lang !== 'es') return c.en; try { DN.es = DN.es || new Intl.DisplayNames(['es'], { type: 'region' }); return DN.es.of(String(c.id).padStart(3, '0')) || c.en; } catch { return c.en; } };
+const countryAt = (lon, lat) => COUNTRIES.find((c) => { const [[w, s], [e, n]] = c.bb; if (lat < s || lat > n) return false; if (w <= e ? (lon < w || lon > e) : (lon < w && lon > e)) return false; return geoContains(c.f, [lon, lat]); });
+export const tier = (a) => (a > 0.03 ? 0 : a > 0.004 ? 1 : a > 0.0008 ? 2 : 3);
 const NOW = new Date(), LASTY = NOW.getUTCFullYear() - (NOW.getUTCMonth() < 7 ? 1 : 0); // último año con imagen de julio
 
 export default function EarthView({ mode = 'hero', points, uncovered, alerts }) {
@@ -36,6 +48,8 @@ export default function EarthView({ mode = 'hero', points, uncovered, alerts }) 
   const [dead, setDead] = useState(false), [ready, setReady] = useState(false), [net, setNet] = useState(true), [tip, setTip] = useState(null);
   const [layerId, setLayerId] = useState('base'), [date, setDate] = useState(isoDaysAgo(3));
   const [year, setYear] = useState(LASTY), [year2, setYear2] = useState(2001), [compare, setCompare] = useState(false), [pos, setPos] = useState(0.5);
+  const [labelsOn, setLabelsOn] = useState(true), [spinOn, setSpinOn] = useState(mode !== 'lakes'), [country, setCountry] = useState(null), langR = useRef(lang);
+  langR.current = lang;
   const [evOn, setEvOn] = useState(false), [evState, setEvState] = useState(null), [ev, setEv] = useState(null);
   const def = layerById(layerId), FAR = mode === 'explore' ? 2.25e7 : 1.15e7; // altura inicial de la cámara
 
@@ -57,13 +71,16 @@ export default function EarthView({ mode = 'hero', points, uncovered, alerts }) 
     // relieve en línea sobre el relieve incluido (si no hay internet queda el incluido)
     const bm = v.imageryLayers.addImageryProvider(provider(LAYERS[0], '', () => {}));
     bm.brightness = 1.08;
-    ['borders', 'pts', 'places', 'lakes', 'events', 'sel'].forEach((n) => { ds.current[n] = new C.CustomDataSource(n); v.dataSources.add(ds.current[n]); });
+    ['borders', 'labels', 'hover', 'cty', 'pts', 'places', 'lakes', 'events', 'sel'].forEach((n) => { ds.current[n] = new C.CustomDataSource(n); v.dataSources.add(ds.current[n]); });
     mesh(world, world.objects.countries).coordinates.forEach((line) => { if (line.length > 1) ds.current.borders.entities.add({ polyline: { positions: C.Cartesian3.fromDegreesArray(line.flat()), width: 1, material: col('#ffffff', 0.6) } }); });
     if (mode === 'lakes') peru.features.filter((f) => f.properties?.name === 'Peru').forEach((f) => rings(f.geometry).forEach((r) => ds.current.borders.entities.add({ polyline: { positions: C.Cartesian3.fromDegreesArray(r.flat()), width: 2.5, material: col('#facc15', 0.95) } })));
     const s = useStore.getState();
     if (mode === 'lakes') v.camera.setView({ destination: C.Cartesian3.fromDegrees(-75.2, -9.6, 3.1e6) }); else v.camera.setView({ destination: C.Cartesian3.fromDegrees(s.place.lon, s.place.lat, FAR) });
     /* interacción */
-    const stop = () => { spin.current = false; }; const cv = sc.canvas;
+    const paint = (name, c, hex, a, w) => { const d = ds.current[name]; d.entities.removeAll(); if (c) { c.polys.forEach((p) => { d.entities.add({ polygon: { hierarchy: new C.PolygonHierarchy(C.Cartesian3.fromDegreesArray(p[0].flat()), p.slice(1).map((h) => new C.PolygonHierarchy(C.Cartesian3.fromDegreesArray(h.flat())))), material: col(hex, a), outline: false } }); d.entities.add({ polyline: { positions: C.Cartesian3.fromDegreesArray(p[0].flat()), width: w, material: col(hex, 0.95) } }); }); } sc.requestRender(); };
+    const flyCountry = (c) => { const [[w, s], [e, n]] = c.b, pad = 0.15 * Math.max(1, Math.abs(n - s)); spin.current = false; setSpinOn(false); v.camera.flyTo({ destination: C.Rectangle.fromDegrees(w - pad, Math.max(-85, s - pad), e + pad, Math.min(85, n + pad)), duration: 1.6 }); };
+    v.paintCountry = (c, fl) => { paint('cty', c, '#facc15', 0.22, 2.5); setCountry(c || null); if (fl && c) flyCountry(c); };
+    const stop = () => { spin.current = false; setSpinOn(false); }; const cv = sc.canvas;
     cv.addEventListener('pointerdown', stop); cv.addEventListener('wheel', stop, { passive: true });
     const off = v.clock.onTick.addEventListener(() => { if (spin.current) { v.camera.rotate(C.Cartesian3.UNIT_Z, -0.0011); sc.requestRender(); } });
     const h = new C.ScreenSpaceEventHandler(cv);
@@ -75,10 +92,19 @@ export default function EarthView({ mode = 'hero', points, uncovered, alerts }) 
       if (mode === 'lakes') return;
       const c = v.camera.pickEllipsoid(e.position, sc.globe.ellipsoid); if (!c) return;
       const g = C.Cartographic.fromCartesian(c); skipFly.current = true;
-      useStore.getState().setPlace({ id: 'custom', lat: +C.Math.toDegrees(g.latitude).toFixed(3), lon: +C.Math.toDegrees(g.longitude).toFixed(3) });
+      const la = +C.Math.toDegrees(g.latitude).toFixed(3), lo = +C.Math.toDegrees(g.longitude).toFixed(3), ct = countryAt(lo, la);
+      v.paintCountry(ct, false);
+      useStore.getState().setPlace({ id: 'custom', lat: la, lon: lo });
     }, C.ScreenSpaceEventType.LEFT_CLICK);
-    let last = 0;
-    h.setInputAction((e) => { const t = performance.now(); if (t - last < 60) return; last = t; const d = sc.pick(e.endPosition)?.id?._td; cv.style.cursor = d ? 'pointer' : 'grab'; setTip(d ? { x: e.endPosition.x, y: e.endPosition.y, name: d.name, sub: d.sub } : null); }, C.ScreenSpaceEventType.MOUSE_MOVE);
+    h.setInputAction((e) => { const c = v.camera.pickEllipsoid(e.position, sc.globe.ellipsoid); if (!c) return; const g = C.Cartographic.fromCartesian(c), ct = countryAt(C.Math.toDegrees(g.longitude), C.Math.toDegrees(g.latitude)); if (ct) v.paintCountry(ct, true); }, C.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
+    let last = 0, hov = null;
+    h.setInputAction((e) => {
+      const t = performance.now(); if (t - last < 60) return; last = t; const d = sc.pick(e.endPosition)?.id?._td; let ct = null;
+      if (!d) { const c = v.camera.pickEllipsoid(e.endPosition, sc.globe.ellipsoid); if (c) { const g = C.Cartographic.fromCartesian(c); ct = countryAt(C.Math.toDegrees(g.longitude), C.Math.toDegrees(g.latitude)); } }
+      if ((ct?.id || null) !== (hov?.id || null)) { hov = ct || null; paint('hover', hov, '#0c5a43', 0.16, 1.6); }
+      cv.style.cursor = d || ct ? 'pointer' : 'grab';
+      setTip(d ? { x: e.endPosition.x, y: e.endPosition.y, name: d.name, sub: d.sub } : ct ? { x: e.endPosition.x, y: e.endPosition.y, name: cname(ct, langR.current), sub: '' } : null);
+    }, C.ScreenSpaceEventType.MOUSE_MOVE);
     const io = new IntersectionObserver(([en]) => { v.useDefaultRenderLoop = en.isIntersecting; if (en.isIntersecting) sc.requestRender(); }); io.observe(el.current);
     setReady(true);
     return () => { io.disconnect(); off(); h.destroy(); cv.removeEventListener('pointerdown', stop); cv.removeEventListener('wheel', stop); V.current = null; try { v.destroy(); } catch { /* ya destruido */ } };
@@ -89,6 +115,14 @@ export default function EarthView({ mode = 'hero', points, uncovered, alerts }) 
   const home = () => { if (mode === 'lakes') fly(-9.6, -75.2, 3.1e6, 1.2); else fly(place.lat, place.lon, FAR, 1.2); };
 
   /* ---- marcadores ---- */
+  useEffect(() => { // nombres de todos los países, por niveles de zoom
+    const d = ds.current.labels; if (!ready || !d) return; d.entities.removeAll();
+    if (labelsOn) {
+      const far = mode === 'hero' ? [3.6e7, 1.3e7, 5.5e6, 2.2e6] : [3.6e7, 1.8e7, 8e6, 3.5e6], fs = mode === 'hero' ? 11 : 13;
+      COUNTRIES.forEach((c) => { const T = tier(c.area); d.entities.add({ position: C.Cartesian3.fromDegrees(c.c[0], c.c[1]), label: { text: cname(c, lang).toUpperCase(), font: `${T === 0 ? 700 : 600} ${fs - (T > 1 ? 1 : 0)}px Inter, sans-serif`, fillColor: col('#14213d', 0.92), outlineColor: col('#ffffff', 0.9), outlineWidth: 3, style: C.LabelStyle.FILL_AND_OUTLINE, distanceDisplayCondition: new C.DistanceDisplayCondition(0, far[T]), scaleByDistance: new C.NearFarScalar(1.5e6, 1.25, 2.5e7, 0.75), horizontalOrigin: C.HorizontalOrigin.CENTER, verticalOrigin: C.VerticalOrigin.CENTER } }); });
+    }
+    V.current.scene.requestRender();
+  }, [ready, lang, labelsOn]);
   useEffect(() => { // lugar elegido
     const d = ds.current.sel; if (!ready || !d || mode === 'lakes') return;
     d.entities.removeAll(); const p = C.Cartesian3.fromDegrees(place.lon, place.lat);
@@ -157,6 +191,7 @@ export default function EarthView({ mode = 'hero', points, uncovered, alerts }) 
       {mode === 'explore' && (
         <div className="earthbar">
           <Select w={280} label={L('Capa satelital de la NASA', 'NASA satellite layer')} data={LAYERS.map((l) => ({ value: l.id, label: l[lang][0] }))} value={layerId} onChange={(x) => x && setLayerId(x)} allowDeselect={false} comboboxProps={{ zIndex: 400 }} />
+          <Select w={200} searchable clearable label={L('Ir a un país', 'Go to a country')} placeholder={L('Escribe un país…', 'Type a country…')} leftSection={<IconFlag size={15} />} data={COUNTRIES.map((c) => ({ value: c.id, label: cname(c, lang) })).sort((a, b) => a.label.localeCompare(b.label, lang))} value={country?.id || null} onChange={(id) => { const c = COUNTRIES.find((x) => x.id === id); V.current?.paintCountry(c || null, !!c); }} comboboxProps={{ zIndex: 400 }} />
           {!def.fixed && <label className="datefield"><span>{L('Fecha de la imagen', 'Image date')}</span><input type="date" value={date} min={`${def.from || 2000}-03-01`} max={isoDaysAgo(def.lag || 1)} onChange={(e) => e.target.value && setDate(e.target.value)} /></label>}
           <Switch color="navy" checked={evOn} onChange={(e) => setEvOn(e.currentTarget.checked)} label={L('Eventos naturales en curso', 'Ongoing natural events')} />
         </div>
@@ -175,10 +210,10 @@ export default function EarthView({ mode = 'hero', points, uncovered, alerts }) 
           <div className="splitbar" style={{ left: `${pos * 100}%` }} onPointerDown={drag}><i><IconArrowsHorizontal size={16} /></i></div>
           <span className="splitlab" style={{ left: 12 }}>{year2}</span><span className="splitlab" style={{ right: 60 }}>{year}</span>
         </>)}
-        <div className="gzoom"><button onClick={() => zoom(0.5)} aria-label="zoom in"><IconPlus size={18} /></button><button onClick={() => zoom(2)} aria-label="zoom out"><IconMinus size={18} /></button><button onClick={home} aria-label="home"><IconWorld size={18} /></button></div>
+        <div className="gzoom"><button onClick={() => zoom(0.5)} aria-label="zoom in"><IconPlus size={18} /></button><button onClick={() => zoom(2)} aria-label="zoom out"><IconMinus size={18} /></button><button onClick={home} aria-label="home"><IconWorld size={18} /></button><button className={labelsOn ? 'on' : ''} onClick={() => setLabelsOn((x) => !x)} aria-label={L('Nombres de países', 'Country names')} title={L('Nombres de países', 'Country names')}><IconTags size={18} /></button><button className={spinOn ? 'on' : ''} onClick={() => { spin.current = !spin.current; setSpinOn(spin.current); }} aria-label={L('Girar solo', 'Auto-rotate')} title={L('Girar solo', 'Auto-rotate')}><IconRotate360 size={18} /></button></div>
         {tip && <div className="gtip earthtip" style={{ left: tip.x + 12, top: tip.y + 12 }}>{tip.name}{tip.sub && <small>{tip.sub}</small>}</div>}
         {!net && <div className="earthnote"><IconWifiOff size={15} /> {L('No se pudo cargar esta capa (sin internet o sin imagen para esa fecha). Ves el relieve incluido.', 'This layer could not load (offline or no image for that date). You see the built-in relief.')}</div>}
-        {mode === 'hero' && <div className="hint light"><IconHandFinger size={15} /> {L('Gira, acerca y toca cualquier punto del planeta', 'Spin, zoom and tap any point on the planet')}</div>}
+        {mode === 'hero' && <div className="hint light"><IconHandFinger size={15} /> {L('Gira, acerca y toca cualquier país o punto del planeta; doble toque para volar a un país', 'Spin, zoom and tap any country or point; double-tap to fly to a country')}</div>}
         {mode !== 'lakes' && (
           <AnimatePresence mode="wait">
             {ev ? (
@@ -190,7 +225,7 @@ export default function EarthView({ mode = 'hero', points, uncovered, alerts }) 
               </motion.div>
             ) : (
               <motion.div key={place.lat + '_' + place.lon} className="gcard" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                <span className="mini">{L('Lugar elegido', 'Chosen place')}</span><b>{placeLabel(place, PLACES, lang)}</b><span className="mini">{place.lat}°, {place.lon}°</span>
+                <span className="mini">{L('Lugar elegido', 'Chosen place')}</span><b>{placeLabel(place, PLACES, lang)}</b><span className="mini">{country ? `${cname(country, lang)} · ` : ''}{place.lat}°, {place.lon}°</span>
                 <Button mt={8} size="sm" color="forest" leftSection={<IconFlask size={16} />} onClick={() => openCase({ vars: ['T2M', 'PRECTOTCORR', 'GWETROOT'] }, place)}>{L('Investigar aquí', 'Investigate here')}</Button>
               </motion.div>
             )}

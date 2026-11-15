@@ -3,7 +3,7 @@ import Interpret from '../Interpret';
    pronóstico con incertidumbre validado y señales de alerta temprana. */
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { Slider, Switch, Alert, Loader } from '@mantine/core';
-import { IconRadar2, IconCrystalBall, IconActivityHeartbeat, IconExternalLink, IconShieldCheck, IconAlertTriangle, IconInfoCircle } from '@tabler/icons-react';
+import { IconRadar2, IconWorld, IconCrystalBall, IconActivityHeartbeat, IconExternalLink, IconShieldCheck, IconAlertTriangle, IconInfoCircle } from '@tabler/icons-react';
 import { motion } from 'framer-motion';
 import { V, sourceOf } from '../../lib/nasa/data';
 import { isTemp } from '../../lib/analysis/viz';
@@ -11,6 +11,7 @@ import * as I from '../../lib/analysis/intel';
 import { useT } from '../../core/i18n';
 import { usePal } from '../../core/palette';
 import { EChart, PlotView } from '../charts/hooks';
+const Planet2050 = lazy(() => import('./Planet2050'));
 const P = lazy(() => import('../charts/Plotly'));
 const Wait = () => <div style={{ padding: 30, textAlign: 'center' }}><Loader size="sm" color="forest" /></div>;
 export const MES = { es: ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'], en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] };
@@ -149,13 +150,14 @@ function Warning({ cur, L }) {
 export default function Intel({ cur, res, pname }) {
   const { lang } = useT(); const L = (a, b) => (lang === 'es' ? a : b); const pal = usePal();
   const [tab, setTab] = useState('anom');
-  const T = [['anom', IconRadar2, L('Anomalías', 'Anomalies')], ['fut', IconCrystalBall, L('Pronóstico y escenarios', 'Forecast and scenarios')], ['ews', IconActivityHeartbeat, L('Alerta temprana', 'Early warning')]];
+  const T = [['anom', IconRadar2, L('Anomalías', 'Anomalies')], ['fut', IconCrystalBall, L('Pronóstico y escenarios', 'Forecast and scenarios')], ['g50', IconWorld, L('Planeta 2050', 'Planet 2050')], ['ews', IconActivityHeartbeat, L('Alerta temprana', 'Early warning')]];
   if (cur.raw.length < 60) return <Alert radius="lg" color="gray">{L('Se necesitan al menos 5 años de datos mensuales.', 'At least 5 years of monthly data are needed.')}</Alert>;
   return (<>
     <div className="subtabs">{T.map(([v, Ic, l]) => <button key={v} className={tab === v ? 'on' : ''} onClick={() => setTab(v)}><Ic size={15} />{l}</button>)}</div>
     <div style={{ paddingTop: 14 }}>
       {tab === 'anom' && <Anomalies cur={cur} res={res} pname={pname} L={L} lang={lang} />}
       {tab === 'fut' && <Future cur={cur} L={L} lang={lang} pal={pal} />}
+      {tab === 'g50' && <Suspense fallback={<Wait />}><Planet2050 cur={cur} res={res} pname={pname} L={L} lang={lang} /></Suspense>}
       {tab === 'ews' && <Warning cur={cur} L={L} />}
     </div>
   </>);
