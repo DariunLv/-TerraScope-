@@ -52,8 +52,9 @@ function Globe({ pl, layerId, photoYear, compareYear, split, pos, color, intensi
     ['b', 'l', 'heat'].forEach((n) => v.dataSources.add(ds.current[n]));
     mesh(world, world.objects.countries).coordinates.forEach((line) => { if (line.length > 1) ds.current.b.entities.add({ polyline: { positions: C.Cartesian3.fromDegreesArray(line.flat()), width: 1, material: col('#ffffff', 0.5) } }); });
     v.camera.setView({ destination: C.Cartesian3.fromDegrees(pl.lon, pl.lat, 1.2e7) });
-    v.camera.flyTo({ destination: C.Cartesian3.fromDegrees(pl.lon, pl.lat, 2.6e6), duration: 2.6 });
-    snapRef.current = { photo: (o) => { const r = takePhoto(v, o); setFlash(true); setTimeout(() => setFlash(false), 450); return r; }, zoom: (f) => { const p = v.camera.positionCartographic; v.camera.flyTo({ destination: C.Cartesian3.fromRadians(p.longitude, p.latitude, Math.max(9000, Math.min(3.4e7, p.height * f))), duration: 0.45 }); }, home: () => v.camera.flyTo({ destination: C.Cartesian3.fromDegrees(pl.lon, pl.lat, 2.6e6), duration: 1.4 }) };
+    const fly = (dest, dur) => { v.camera.cancelFlight(); let on = true; const pump = () => { if (!on) return; sc.requestRender(); requestAnimationFrame(pump); }; pump(); v.camera.flyTo({ destination: dest, duration: dur, complete: () => { on = false; sc.requestRender(); }, cancel: () => { on = false; } }); };
+    fly(C.Cartesian3.fromDegrees(pl.lon, pl.lat, 2.6e6), 2.6);
+    snapRef.current = { photo: (o) => { const r = takePhoto(v, o); setFlash(true); setTimeout(() => setFlash(false), 450); return r; }, zoom: (f) => { const p = v.camera.positionCartographic; fly(C.Cartesian3.fromRadians(p.longitude, p.latitude, Math.max(9000, Math.min(3.4e7, p.height * f))), 0.45); }, home: () => fly(C.Cartesian3.fromDegrees(pl.lon, pl.lat, 2.6e6), 1.4) };
     setReady(true);
     return () => { Vw.current = null; snapRef.current = null; try { v.destroy(); } catch { /* ya destruido */ } };
   }, [pl.lat, pl.lon]);
@@ -71,8 +72,8 @@ function Globe({ pl, layerId, photoYear, compareYear, split, pos, color, intensi
     const t = setTimeout(() => { // espera a que el control de año se detenga
       const def = layerById(layerId), tgt = def.over ? 0.88 : 1, onErr = () => { errs.current += 1; if (errs.current === 8) setNet(false); };
       errs.current = 0; setNet(true);
-      const drop = (keep) => { lyr.current.filter((l) => !keep || !keep.includes(l)).forEach((l) => v.imageryLayers.remove(l, true)); lyr.current = keep ? [...keep] : []; };
-      const mk = (y, dir, a) => { /* foto diaria: el satélite deja franjas sin datos; se apilan los 2 días anteriores debajo para rellenarlas */ const days = def.id === 'tc' ? [13, 14, 15] : [15], out = days.map((dd) => { const l = v.imageryLayers.addImageryProvider(provider(def, def.fixed ? '' : `${y}-07-${dd}`, onErr)); if (def.id === 'tc') { l.colorToAlpha = C.Color.BLACK; l.colorToAlphaThreshold = 0.12; } l.alpha = a; if (dir != null) l.splitDirection = dir; lyr.current.push(l); return l; }); return out; };
+      const zone = C.Rectangle.fromDegrees(Math.max(-180, pl.lon - 34), Math.max(-80, pl.lat - 24), Math.min(180, pl.lon + 34), Math.min(80, pl.lat + 24)), drop = (keep) => { lyr.current.filter((l) => !keep || !keep.includes(l)).forEach((l) => v.imageryLayers.remove(l, true)); lyr.current = keep ? [...keep] : []; };
+      const mk = (y, dir, a) => { /* foto diaria: el satélite deja franjas sin datos; se apilan los 2 días anteriores debajo para rellenarlas */ const days = def.id === 'tc' ? [13, 14, 15] : [15], out = days.map((dd) => { const l = v.imageryLayers.addImageryProvider(provider(def, def.fixed ? '' : `${y}-07-${dd}`, onErr, def.fixed ? undefined : zone)); if (def.id === 'tc') { l.colorToAlpha = C.Color.BLACK; l.colorToAlphaThreshold = 0.12; } l.alpha = a; if (dir != null) l.splitDirection = dir; lyr.current.push(l); return l; }); return out; };
       if (layerId === 'base') { drop(null); sc.requestRender(); return; }
       if (split && !def.fixed) { drop(null); mk(compareYear, C.SplitDirection.LEFT, tgt); mk(photoYear, C.SplitDirection.RIGHT, tgt); sc.requestRender(); return; }
       if (!lyr.current.length) { mk(photoYear, null, tgt); sc.requestRender(); return; }
@@ -84,7 +85,7 @@ function Globe({ pl, layerId, photoYear, compareYear, split, pos, color, intensi
       tm = setTimeout(go, 2200);
     }, 160);
     return () => clearTimeout(t);
-  }, [ready, layerId, photoYear, compareYear, split]);
+  }, [ready, layerId, photoYear, compareYear, split, pl.lat, pl.lon]);
   useEffect(() => { const v = Vw.current; if (ready && v) { v.scene.splitPosition = pos; v.scene.requestRender(); } }, [ready, pos, split]);
   /* halo de calor: el cambio se pinta sobre el propio planeta y se anima hacia el nuevo valor */
   const H = useRef({ r: 2e5, a: 0.4, tr: 2e5, ta: 0.4, raf: 0, hex: null, ent: null, pt: null });
@@ -97,7 +98,7 @@ function Globe({ pl, layerId, photoYear, compareYear, split, pos, color, intensi
       h.ent = d.entities.add({ position: p, ellipse: { semiMajorAxis: new C.CallbackProperty(() => h.r, false), semiMinorAxis: new C.CallbackProperty(() => h.r, false), height: 0, material: new C.ImageMaterialProperty({ image: heatImg(color), transparent: true, color: new C.CallbackProperty(() => C.Color.WHITE.withAlpha(h.a), false) }) } });
     }
     h.ent.show = !!showHeat;
-    if (!h.pt) h.pt = d.entities.add({ position: p, point: { pixelSize: 11, color: col(color), outlineColor: C.Color.WHITE, outlineWidth: 2.5, disableDepthTestDistance: Number.POSITIVE_INFINITY }, label: { text: label, font: '700 15px Inter, sans-serif', fillColor: C.Color.WHITE, outlineColor: col('#0b1630'), outlineWidth: 5, style: C.LabelStyle.FILL_AND_OUTLINE, pixelOffset: new C.Cartesian2(0, -28), disableDepthTestDistance: Number.POSITIVE_INFINITY } });
+    if (!h.pt) h.pt = d.entities.add({ position: C.Cartesian3.fromDegrees(pl.lon, pl.lat, 25000), point: { pixelSize: 11, color: col(color), outlineColor: C.Color.WHITE, outlineWidth: 2.5 }, label: { text: label, font: '700 15px Inter, sans-serif', fillColor: C.Color.WHITE, outlineColor: col('#0b1630'), outlineWidth: 5, style: C.LabelStyle.FILL_AND_OUTLINE, pixelOffset: new C.Cartesian2(0, -28) } });
     else { h.pt.point.color = col(color); h.pt.label.text = label; }
     if (!h.raf) { const step = () => { h.r += (h.tr - h.r) * 0.1; h.a += (h.ta - h.a) * 0.1; v.scene.requestRender();
       if (Math.abs(h.tr - h.r) > 800 || Math.abs(h.ta - h.a) > 0.005) h.raf = requestAnimationFrame(step); else { h.r = h.tr; h.a = h.ta; h.raf = 0; } }; h.raf = requestAnimationFrame(step); }

@@ -22,10 +22,10 @@ import { useT } from '../../core/i18n';
 
 const col = (c, a = 1) => C.Color.fromCssColorString(c).withAlpha(a);
 const CREDIT = 'NASA GIBS / EOSDIS';
-export function provider(def, date, onErr) {
+export function provider(def, date, onErr, rect) { // rect: limita la foto a una zona (rectángulo de Cesium)
   const p = def.lvl
-    ? new C.UrlTemplateImageryProvider({ url: tileUrl(def, date), maximumLevel: def.lvl, credit: CREDIT })
-    : new C.WebMapServiceImageryProvider({ url: GIBS_WMS, layers: def.layer, parameters: { transparent: true, format: 'image/png', time: date }, enablePickFeatures: false, maximumLevel: 11, credit: CREDIT });
+    ? new C.UrlTemplateImageryProvider({ url: tileUrl(def, date), maximumLevel: def.lvl, credit: CREDIT, ...(rect ? { rectangle: rect } : {}) })
+    : new C.WebMapServiceImageryProvider({ url: GIBS_WMS, layers: def.layer, parameters: { transparent: true, format: 'image/png', time: date }, enablePickFeatures: false, maximumLevel: 11, credit: CREDIT, ...(rect ? { rectangle: rect } : {}) });
   p.errorEvent.addEventListener(onErr);
   return p;
 }
@@ -38,7 +38,8 @@ export const COUNTRIES = feature(world, world.objects.countries).features.map((f
   return { id: String(f.id), en: f.properties.name, area: geoArea(f), c: geoCentroid(bp), b: geoBounds(bp), bb: geoBounds(f), polys, f };
 });
 const DN = {};
-export const cname = (c, lang) => { if (lang !== 'es') return c.en; try { DN.es = DN.es || new Intl.DisplayNames(['es'], { type: 'region' }); return DN.es.of(String(c.id).padStart(3, '0')) || c.en; } catch { return c.en; } };
+const A2 = { '242': 'FJ', '834': 'TZ', '732': 'EH', '124': 'CA', '840': 'US', '398': 'KZ', '860': 'UZ', '598': 'PG', '360': 'ID', '032': 'AR', '152': 'CL', '180': 'CD', '706': 'SO', '404': 'KE', '729': 'SD', '148': 'TD', '332': 'HT', '214': 'DO', '643': 'RU', '044': 'BS', '238': 'FK', '578': 'NO', '304': 'GL', '260': 'TF', '626': 'TL', '710': 'ZA', '426': 'LS', '484': 'MX', '858': 'UY', '076': 'BR', '068': 'BO', '604': 'PE', '170': 'CO', '591': 'PA', '188': 'CR', '558': 'NI', '340': 'HN', '222': 'SV', '320': 'GT', '084': 'BZ', '862': 'VE', '328': 'GY', '740': 'SR', '250': 'FR', '218': 'EC', '630': 'PR', '388': 'JM', '192': 'CU', '716': 'ZW', '072': 'BW', '516': 'NA', '686': 'SN', '466': 'ML', '478': 'MR', '204': 'BJ', '562': 'NE', '566': 'NG', '120': 'CM', '768': 'TG', '288': 'GH', '384': 'CI', '324': 'GN', '624': 'GW', '430': 'LR', '694': 'SL', '854': 'BF', '140': 'CF', '178': 'CG', '266': 'GA', '226': 'GQ', '894': 'ZM', '454': 'MW', '508': 'MZ', '748': 'SZ', '024': 'AO', '108': 'BI', '376': 'IL', '422': 'LB', '450': 'MG', '275': 'PS', '270': 'GM', '788': 'TN', '012': 'DZ', '400': 'JO', '784': 'AE', '634': 'QA', '414': 'KW', '368': 'IQ', '512': 'OM', '548': 'VU', '116': 'KH', '764': 'TH', '418': 'LA', '104': 'MM', '704': 'VN', '408': 'KP', '410': 'KR', '496': 'MN', '356': 'IN', '050': 'BD', '064': 'BT', '524': 'NP', '586': 'PK', '004': 'AF', '762': 'TJ', '417': 'KG', '795': 'TM', '364': 'IR', '760': 'SY', '051': 'AM', '752': 'SE', '112': 'BY', '804': 'UA', '616': 'PL', '040': 'AT', '348': 'HU', '498': 'MD', '642': 'RO', '440': 'LT', '428': 'LV', '233': 'EE', '276': 'DE', '100': 'BG', '300': 'GR', '792': 'TR', '008': 'AL', '191': 'HR', '756': 'CH', '442': 'LU', '056': 'BE', '528': 'NL', '620': 'PT', '724': 'ES', '372': 'IE', '540': 'NC', '090': 'SB', '554': 'NZ', '036': 'AU', '144': 'LK', '156': 'CN', '158': 'TW', '380': 'IT', '208': 'DK', '826': 'GB', '352': 'IS', '031': 'AZ', '268': 'GE', '608': 'PH', '458': 'MY', '096': 'BN', '705': 'SI', '246': 'FI', '703': 'SK', '203': 'CZ', '232': 'ER', '392': 'JP', '600': 'PY', '887': 'YE', '682': 'SA', '010': 'AQ', '196': 'CY', '504': 'MA', '818': 'EG', '434': 'LY', '231': 'ET', '262': 'DJ', '800': 'UG', '646': 'RW', '070': 'BA', '807': 'MK', '688': 'RS', '499': 'ME', '780': 'TT', '728': 'SS' }; // ISO numérico → alfa-2 (para traducir el nombre al español)
+export const cname = (c, lang) => { const a = A2[String(c.id).padStart(3, '0')]; if (lang !== 'es' || !a) return c.en; try { DN.es = DN.es || new Intl.DisplayNames(['es'], { type: 'region' }); const n = DN.es.of(a); return n && n !== a ? n : c.en; } catch { return c.en; } };
 const countryAt = (lon, lat) => COUNTRIES.find((c) => { const [[w, s], [e, n]] = c.bb; if (lat < s || lat > n) return false; if (w <= e ? (lon < w || lon > e) : (lon < w && lon > e)) return false; return geoContains(c.f, [lon, lat]); });
 export const tier = (a) => (a > 0.03 ? 0 : a > 0.004 ? 1 : a > 0.0008 ? 2 : 3);
 const NOW = new Date(), LASTY = NOW.getUTCFullYear() - (NOW.getUTCMonth() < 7 ? 1 : 0); // último año con imagen de julio
