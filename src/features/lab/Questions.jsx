@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { V, PLACES } from '../../lib/nasa/data';
 import { useStore } from '../../core/store';
 import { useT } from '../../core/i18n';
+import PlacePicker from './PlacePicker';
 const B = [['desert', IconCactus, 'Desierto o zona seca', 'Desert or dryland'], ['forest', IconTrees, 'Selva o bosque', 'Rainforest'], ['city', IconBuildingSkyscraper, 'Gran ciudad', 'Large city'], ['mountain', IconMountain, 'Alta montaña', 'High mountain'], ['coast', IconRipple, 'Costa, delta o estuario', 'Coast, delta or estuary'], ['polar', IconSnowflake, 'Zona polar', 'Polar region']];
 const C = [['agua', IconDroplet, 'Agua y sequía', 'Water & drought', ['PRECTOTCORR', 'GWETROOT', 'RH2M']], ['calor', IconFlame, 'Calor', 'Heat', ['T2M_MAX', 'T2M_MIN', 'TS']], ['agro', IconPlant2, 'Agricultura', 'Farming', ['GWETROOT', 'T2M_MIN', 'PRECTOTCORR']], ['energia', IconSolarPanel, 'Energía solar y viento', 'Solar & wind energy', ['ALLSKY_SFC_SW_DWN', 'WS10M', 'CLOUD_AMT']]];
 const EXTRA = { desert: ['T2M_MAX'], forest: ['CLOUD_AMT'], city: ['T2M_MIN'], mountain: ['TS'], coast: ['QV2M'], polar: ['T2M'] };
@@ -29,6 +30,7 @@ export default function Questions() {
             <p className="qq">{L('Pistas recomendadas', 'Recommended clues')}</p>
             <p className="mini" style={{ fontSize: 14 }}>{WHY[lang][b]}</p>
             <div className="recs">{vars.map((k) => <div key={k} className="rec"><b>{V[k][lang][0]}</b><span>{V[k][lang][1]}</span></div>)}</div>
+            <PlacePicker places={cand.map((p) => ({ id: p.id, lat: p.lat, lon: p.lon, label: p[lang] }))} sel={pid || cand[0]?.id} onSelect={setPid} />
             <Chip.Group value={pid || cand[0]?.id} onChange={setPid}><Group gap={6} mt={10}>{cand.map((p) => <Chip key={p.id} value={p.id} size="xs" color="forest">{p[lang]}</Chip>)}</Group></Chip.Group>
             <Button mt="md" color="forest" size="md" leftSection={<IconSearch size={18} />} onClick={go}>{L('Investigar con estas pistas', 'Investigate with these clues')}</Button>
           </motion.div>

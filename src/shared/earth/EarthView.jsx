@@ -45,19 +45,19 @@ const countryAt = (lon, lat) => COUNTRIES.find((c) => { const [[w, s], [e, n]] =
 export const tier = (a) => (a > 0.03 ? 0 : a > 0.004 ? 1 : a > 0.0008 ? 2 : 3);
 const NOW = new Date(), LASTY = NOW.getUTCFullYear() - (NOW.getUTCMonth() < 7 ? 1 : 0); // último año con imagen de julio
 
-export default function EarthView({ mode = 'hero', points, uncovered, alerts }) {
+export default function EarthView({ mode = 'hero', points, uncovered, alerts, pick }) {
   const { lang } = useT(); const L = (a, b) => (lang === 'es' ? a : b);
   const { place, setPlace, lake, setLake, scan, openCase, lakes } = useStore();
-  const box = useRef(null), el = useRef(null), V = useRef(null), ds = useRef({}), ov = useRef([]), errs = useRef(0), spin = useRef(mode !== 'lakes'), skipFly = useRef(true);
+  const box = useRef(null), el = useRef(null), V = useRef(null), ds = useRef({}), ov = useRef([]), errs = useRef(0), spin = useRef(mode !== 'lakes' && mode !== 'pick'), pickR = useRef(pick), skipFly = useRef(true);
   const [dead, setDead] = useState(false), [ready, setReady] = useState(false), [net, setNet] = useState(true), [tip, setTip] = useState(null);
   const [layerId, setLayerId] = useState('base'), [date, setDate] = useState(isoDaysAgo(3));
   const [year, setYear] = useState(LASTY), [year2, setYear2] = useState(2001), [compare, setCompare] = useState(false), [pos, setPos] = useState(0.5);
-  const [labelsOn, setLabelsOn] = useState(true), [spinOn, setSpinOn] = useState(mode !== 'lakes'), [country, setCountry] = useState(null), langR = useRef(lang);
-  langR.current = lang;
+  const [labelsOn, setLabelsOn] = useState(true), [spinOn, setSpinOn] = useState(mode !== 'lakes' && mode !== 'pick'), [country, setCountry] = useState(null), langR = useRef(lang);
+  langR.current = lang; pickR.current = pick;
   const [flash, setFlash] = useState(false), [light, setLight] = useState(false), [tilt, setTilt] = useState(false);
   const wrapCard = (node) => { if (mode !== 'hero') return node; const host = typeof document !== 'undefined' && document.querySelector('.hero-space'); return host ? createPortal(node, host) : node; };
   const [evOn, setEvOn] = useState(false), [evState, setEvState] = useState(null), [ev, setEv] = useState(null);
-  const def = layerById(layerId), FAR = mode === 'explore' ? 2.25e7 : mode === 'hero' ? 7.2e6 : 1.15e7; // altura inicial de la cámara
+  const def = layerById(layerId), FAR = mode === 'pick' ? 2.0e7 : mode === 'explore' ? 2.25e7 : mode === 'hero' ? 7.2e6 : 1.15e7; // altura inicial de la cámara
 
   /* ---- crear el visor una sola vez ---- */
   useEffect(() => {
@@ -92,6 +92,7 @@ export default function EarthView({ mode = 'hero', points, uncovered, alerts }) 
     const h = new C.ScreenSpaceEventHandler(cv);
     h.setInputAction((e) => {
       const hit = sc.pick(e.position), d = hit?.id?._td;
+      if (mode === 'pick') { if (d?.kind === 'pick') pickR.current?.onSelect?.(d.id); return; }
       if (d?.kind === 'lake') { useStore.getState().setLake(d.id); if (mode !== 'lakes') { skipFly.current = true; useStore.getState().setPlace({ id: 'custom', lat: d.lat, lon: d.lon, name: d.name }); } return; }
       if (d?.kind === 'place') { skipFly.current = true; useStore.getState().setPlace({ id: d.id, lat: d.lat, lon: d.lon }); return; }
       if (d?.kind === 'event') { setEv(d); return; }
@@ -136,22 +137,41 @@ export default function EarthView({ mode = 'hero', points, uncovered, alerts }) 
     V.current.scene.requestRender();
   }, [ready, lang, labelsOn]);
   useEffect(() => { // lugar elegido
-    const d = ds.current.sel; if (!ready || !d || mode === 'lakes') return;
+    const d = ds.current.sel; if (!ready || !d || mode === 'lakes' || mode === 'pick') return;
     d.entities.removeAll(); const p = C.Cartesian3.fromDegrees(place.lon, place.lat);
     d.entities.add({ position: p, point: { pixelSize: 30, color: col('#facc15', 0.28), outlineColor: col('#facc15', 0.9), outlineWidth: 2 } });
     d.entities.add({ position: p, point: { pixelSize: 11, color: col('#facc15'), outlineColor: col('#14213d'), outlineWidth: 2 } });
     if (skipFly.current) { skipFly.current = false; V.current.scene.requestRender(); return; }
     spin.current = false; fly(place.lat, place.lon, Math.min(V.current.camera.positionCartographic.height, 5.5e6));
   }, [ready, place.lat, place.lon]);
+  useEffect(() => { // modo “elegir lugar”: puntos, zona sombreada, onda y vuelo
+    const d = ds.current.sel; if (!ready || !d || mode !== 'pick' || !pick) return; d.entities.removeAll();
+    const t0 = performance.now(), V0 = V.current;
+    pick.places.forEach((q) => { const on = q.id === pick.sel, pos = C.Cartesian3.fromDegrees(q.lon, q.lat);
+      const e = d.entities.add({ position: pos, point: { pixelSize: on ? 16 : 11, color: col(on ? '#e8590c' : '#ffffff'), outlineColor: col('#06243f'), outlineWidth: 2.5, disableDepthTestDistance: 1e7 },
+        label: { text: q.label, font: `${on ? 700 : 600} 13px Inter, sans-serif`, fillColor: C.Color.WHITE, outlineColor: col('#06243f'), outlineWidth: 4, style: C.LabelStyle.FILL_AND_OUTLINE, pixelOffset: new C.Cartesian2(0, -22), disableDepthTestDistance: 1e7, scaleByDistance: new C.NearFarScalar(2e6, 1, 3e7, 0.55) } });
+      e._td = { kind: 'pick', id: q.id, lat: q.lat, lon: q.lon, name: q.label }; });
+    const q = pick.places.find((x) => x.id === pick.sel);
+    if (q) {
+      const pos = C.Cartesian3.fromDegrees(q.lon, q.lat), R = (pick.radiusKm || 300) * 1000;
+      d.entities.add({ position: pos, ellipse: { semiMajorAxis: R, semiMinorAxis: R, material: col('#5eead4', 0.38), outline: true, outlineColor: col('#5eead4'), outlineWidth: 2, height: 0 } });
+      d.entities.add({ position: pos, ellipse: { semiMajorAxis: new C.CallbackProperty(() => R * (0.3 + 1.6 * (((performance.now() - t0) % 2000) / 2000)), false), semiMinorAxis: new C.CallbackProperty(() => R * (0.3 + 1.6 * (((performance.now() - t0) % 2000) / 2000)), false), material: C.Color.TRANSPARENT, outline: true, outlineColor: new C.CallbackProperty(() => col('#5eead4', 1 - (((performance.now() - t0) % 2000) / 2000)), false), outlineWidth: 2, height: 0 } });
+      spin.current = false; setSpinOn(false); V0.camera.flyTo({ destination: C.Cartesian3.fromDegrees(q.lon, q.lat, 3.2e6), duration: 1.6 });
+      const iv = setInterval(() => V0.scene.requestRender(), 60); return () => clearInterval(iv);
+    } else if (pick.places.length) {
+      const lo = pick.places.map((x) => x.lon), la = pick.places.map((x) => x.lat); V0.camera.flyTo({ destination: C.Cartesian3.fromDegrees((Math.min(...lo) + Math.max(...lo)) / 2, (Math.min(...la) + Math.max(...la)) / 2, 1.6e7), duration: 1.4 });
+    }
+    V0.scene.requestRender(); return undefined;
+  }, [ready, pick?.sel, pick?.places?.length, pick?.places?.[0]?.id, lang]); // eslint-disable-line
   useEffect(() => { // lugares del mundo (color según el escaneo)
-    const d = ds.current.places; if (!ready || !d || mode === 'lakes') return; d.entities.removeAll();
+    const d = ds.current.places; if (!ready || !d || mode === 'lakes' || mode === 'pick') return; d.entities.removeAll();
     PLACES.forEach((p) => { const r = scan?.list.find((x) => x.id === p.id); const c = r ? (r.perDec >= 0 ? '#ea580c' : '#1d4ed8') : '#0c5a43';
       const e = d.entities.add({ position: C.Cartesian3.fromDegrees(p.lon, p.lat), point: { pixelSize: r ? 12 : 9, color: col(c, r && !r.fdr ? 0.45 : 1), outlineColor: C.Color.WHITE, outlineWidth: 1.6 } });
       e._td = { kind: 'place', id: p.id, lat: p.lat, lon: p.lon, name: p[lang], sub: r ? `${r.perDec > 0 ? '+' : ''}${r.perDec.toFixed(3)} / ${L('década', 'decade')}` : '' }; });
     V.current.scene.requestRender();
   }, [ready, scan, lang]);
   useEffect(() => { // lagos
-    const d = ds.current.lakes; if (!ready || !d) return; d.entities.removeAll(); if (mode === 'hero') return;
+    const d = ds.current.lakes; if (!ready || !d) return; d.entities.removeAll(); if (mode === 'hero' || mode === 'pick') return;
     lakes.forEach((l) => { const sel = l.id === lake && mode === 'lakes', a = alerts?.get(l.id); const c = a?.color || (uncovered?.has(l.id) ? '#dc2626' : TYPES[l.type]?.[2] || '#0c7a5b');
       const e = d.entities.add({ position: C.Cartesian3.fromDegrees(l.lon, l.lat), point: { pixelSize: Math.round((mode === 'lakes' ? 9 : 6) + Math.sqrt(Math.min(l.area, 600)) * 0.5), color: col(c, 0.9), outlineColor: sel ? col('#facc15') : C.Color.WHITE, outlineWidth: sel ? 4 : 1.4 },
         label: sel ? { text: l.name, font: '600 14px Inter, sans-serif', fillColor: C.Color.WHITE, outlineColor: col('#14213d'), outlineWidth: 4, style: C.LabelStyle.FILL_AND_OUTLINE, pixelOffset: new C.Cartesian2(0, -26), disableDepthTestDistance: Number.POSITIVE_INFINITY } : undefined });
@@ -243,7 +263,7 @@ export default function EarthView({ mode = 'hero', points, uncovered, alerts }) 
         {tip && <div className="gtip earthtip" style={{ left: tip.x + 12, top: tip.y + 12 }}>{tip.name}{tip.sub && <small>{tip.sub}</small>}</div>}
         {!net && <div className="earthnote"><IconWifiOff size={15} /> {L('No se pudo cargar esta capa (sin internet o sin imagen para esa fecha). Ves el relieve incluido.', 'This layer could not load (offline or no image for that date). You see the built-in relief.')}</div>}
         {mode === 'hero' && <div className="hint light"><IconHandFinger size={15} /> {L('Gira, acerca y toca cualquier país o punto del planeta; doble toque para volar a un país', 'Spin, zoom and tap any country or point; double-tap to fly to a country')}</div>}
-        {mode !== 'lakes' && wrapCard(
+        {mode !== 'lakes' && mode !== 'pick' && wrapCard(
           <AnimatePresence mode="wait">
             {ev ? (
               <motion.div key={ev.id} className="gcard" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
