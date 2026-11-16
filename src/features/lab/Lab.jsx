@@ -1,4 +1,6 @@
 import Interpret from '../../shared/Interpret';
+import Ghost from '../../ui/Ghost';
+import AutoExplain, { stats as seriesStats } from '../../shared/charts/AutoExplain';
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Button, Chip, RangeSlider, Select, SegmentedControl, Switch, Tooltip, Progress, Alert, Group, Tabs } from '@mantine/core';
 import { IconDownload, IconTrendingUp, IconTrendingDown, IconEqual, IconCheck, IconX, IconSearch, IconUpload, IconMessageQuestion, IconFolders, IconAdjustments, IconGauge, IconChartDots3, IconArrowsLeftRight, IconRadar2, IconFlask } from '@tabler/icons-react';
@@ -35,6 +37,8 @@ export default function Lab() {
   useEffect(() => { if (sec && sec.startsWith('lab:')) setTab(sec.slice(4)); }, [secN]); // eslint-disable-line
   const [busy, setBusy] = useState(false); const [res, setRes] = useState(null); const [sel, setSel] = useState(null); const [note, setNote] = useState(''); const [tab, setTab] = useState('resumen');
   const out = useRef(null);
+  const want3d = useStore((s) => s.want3d);
+  useEffect(() => { if (!want3d) return; (async () => { await run({}); setTab(want3d.kind === 'planet' ? 'intel' : 'avanzado'); setTimeout(() => document.querySelector('.subtabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 900); })(); }, [want3d?.n]); // eslint-disable-line
   const placeData = PLACES.map((p) => ({ value: p.id, label: p[lang] })).concat(place.id === 'custom' ? [{ value: 'custom', label: placeLabel(place, PLACES, lang) }] : []);
   const run = async (o = {}) => {
     const vs = o.vars || vars, pl = o.place || place, yr = o.years || years, dsv = o.ds ?? ds; if (!vs.length) return;
@@ -63,7 +67,8 @@ export default function Lab() {
   return (
     <section id="lab"><div className="wrap">
       <PageHead icon={IconFlask} eyebrow={L('Laboratorio del detective', 'Detective lab')} title={L('Investiga un lugar paso a paso', 'Investigate a place step by step')} sub={L('Elige cómo empezar. Siempre terminas con lo mismo: qué cambia, cuánto cambia y si el cambio es significativo.', 'Choose how to start. You always end with the same: what changes, how much, and whether the change is significant.')} />
-      <div className="card panel startcard">
+      <div className="card panel startcard"><Ghost k="flask" i={1} size={210} pos={0} />
+        <div className="go3d"><span>{L('Gráficos 3D', '3D charts')}</span><Button size="compact-sm" radius="xl" color="navy" onClick={() => useStore.getState().open3D('planet')}>{L('Planeta 3D · 2050', '3D planet · 2050')}</Button><Button size="compact-sm" radius="xl" variant="light" color="navy" onClick={() => useStore.getState().open3D('surface')}>{L('Superficie 3D año × mes', '3D surface year × month')}</Button></div>
         <SegmentedControl fullWidth color="forest" value={start} onChange={setStart} data={[
           { value: 'guia', label: <span className="seg"><IconMessageQuestion size={16} />{L('Preguntas guiadas', 'Guided questions')}</span> },
           { value: 'casos', label: <span className="seg"><IconFolders size={16} />{L('Casos de ejemplo', 'Example cases')}</span> },
@@ -137,6 +142,7 @@ export default function Lab() {
                   {res.list.length > 1 && (<>
                     <h4 className="sh">{L('Todas tus variables, con zoom sincronizado', 'All your variables, with synchronized zoom')}</h4>
                     <LinkedCharts list={res.list} />
+                    <AutoExplain title={L('Todas tus variables con zoom sincronizado', 'All your variables with synchronized zoom')} facts={res.list.map((x) => seriesStats(V[x.k][lang][0] + ' (' + V[x.k].u + ')', x.r.x, x.r.y)).join('\n')} />
                     <h4 className="sh">{L('¿Qué variables se mueven junto con', 'Which variables move together with')} {V[cur.k][lang][0].toLowerCase()}?</h4>
                     {res.list.filter((x) => x.k !== cur.k).map((x) => { const c = pearson(cur.r.y, x.r.y); return (
                       <div key={x.k} className="row" style={{ marginBottom: 6, flexWrap: 'nowrap' }}>
@@ -148,8 +154,8 @@ export default function Lab() {
                   </>)}
                   {cur.r.annual && (
                     <div className="two">
-                      <div><h4 className="sh">{t.stripesTitle}</h4><Stripes vals={cur.r.annual.y} years={cur.r.annual.years} k={cur.k} dec={V[cur.k].d} unit={V[cur.k].u} /><p className="mini">{t.stripesHelp}</p></div>
-                      <div><h4 className="sh">{t.heatTitle}</h4><Heatmap pts={cur.raw} k={cur.k} unit={V[cur.k].u} dec={V[cur.k].d} /><p className="mini">{t.heatHelp}</p></div>
+                      <div><h4 className="sh">{t.stripesTitle}</h4><Stripes vals={cur.r.annual.y} years={cur.r.annual.years} k={cur.k} dec={V[cur.k].d} unit={V[cur.k].u} /><p className="mini">{t.stripesHelp}</p><AutoExplain title={t.stripesTitle} kind="warming-stripes" facts={seriesStats(V[cur.k][lang][0] + ' (annual means, one stripe per year)', cur.r.annual.years, cur.r.annual.y)} /></div>
+                      <div><h4 className="sh">{t.heatTitle}</h4><Heatmap pts={cur.raw} k={cur.k} unit={V[cur.k].u} dec={V[cur.k].d} /><p className="mini">{t.heatHelp}</p><AutoExplain title={t.heatTitle} kind="year-by-month heatmap" facts={seriesStats(V[cur.k][lang][0] + ' (monthly values, rows = years, columns = months)', cur.raw.map((p) => p.year + '-' + p.month), cur.raw.map((p) => p.v))} /></div>
                     </div>
                   )}
                   {cur.k !== 'CSV' && <Compare key={cur.k} k={cur.k} a={cur.r} aName={pname(res.pl)} years={years} ds={ds} live={res.live} />}

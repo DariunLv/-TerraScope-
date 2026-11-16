@@ -1,4 +1,5 @@
 import { IconMountain, IconSnowflake, IconPlant2, IconTrees, IconArrowRight } from '@tabler/icons-react';
+import Ghost from '../../ui/Ghost';
 import { motion } from 'framer-motion';
 import SpotlightCard from '../../ui/SpotlightCard';
 import { PLACES } from '../../lib/nasa/data';
@@ -13,7 +14,7 @@ export default function CaseFiles() {
       {t.cases.map((c, i) => { const I = IC[c.ic]; return (
         <motion.div key={c.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}>
           <SpotlightCard theme="light" className="case" onClick={() => go(c)} style={{ cursor: 'pointer', height: '100%' }}>
-            <div className="icobox"><I size={28} /></div><h3 style={{ margin: '8px 0' }}>{c.n}</h3><p className="mini" style={{ fontSize: 14 }}>{c.d}</p>
+            <Ghost k={['snow','fire','water','sun','rain','leaf','mountain'][i % 7]} i={i} size={120} pos={i} /><div className="icobox"><I size={28} /></div><h3 style={{ margin: '8px 0' }}>{c.n}</h3><p className="mini" style={{ fontSize: 14 }}>{c.d}</p>
             <span className="go">{t.open} <IconArrowRight size={16} /></span>
           </SpotlightCard>
         </motion.div>); })}

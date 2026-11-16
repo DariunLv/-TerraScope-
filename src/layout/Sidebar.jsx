@@ -1,18 +1,20 @@
 /* Menú lateral tipo dashboard (todas las vistas menos la portada). Se puede contraer; en celular se usa la barra inferior. */
 import { motion } from 'framer-motion';
 import { Tooltip } from '@mantine/core';
+import logo from '../assets/logo.png';
 import { IconSatellite, IconLayoutSidebarLeftCollapse, IconLayoutSidebarLeftExpand, IconHome, IconTrafficLights, IconTimeline, IconTrendingUp, IconChecklist, IconMessageChatbot, IconCertificate, IconGauge, IconChartDots3, IconRadar2, IconArrowsLeftRight, IconRoute, IconPuzzle, IconBook2, IconTrophy } from '@tabler/icons-react';
 import { useStore } from '../core/store';
 import { useT } from '../core/i18n';
 import { VIEWS } from './TopBar';
 import Killa, { VIEW_POSE as POSE } from '../killa/Killa';
 
-const GROUPS = [[['Investigar', 'Investigate'], ['explorar', 'lab', 'lagos']], [['Decidir', 'Decide'], ['decidir']], [['Más', 'More'], ['aprender', 'proyecto']]];
+const GROUPS = [[['Investigar', 'Investigate'], ['explorar', 'lab', 'lagos']], [['Decidir', 'Decide'], ['decidir']], [['Más', 'More'], ['killa', 'aprender', 'proyecto']]];
 const SAY = {
   explorar: ['Gira el planeta y toca una capa: yo te cuento qué ves.', 'Spin the planet and tap a layer: I will tell you what you see.'],
   lab: ['Elige un lugar y una variable. Yo busco lo que cambió.', 'Pick a place and a variable. I will find what changed.'],
   decidir: ['Semáforo, tres futuros y yo para preguntar.', 'Traffic light, three futures and me to ask.'],
   lagos: ['39 lagos del Perú. Ordeno los que se salen de lo normal.', '39 Peruvian lakes. I sort the ones off normal.'],
+  killa: ['Pregúntame lo que quieras sobre la NASA o la app.', 'Ask me anything about NASA or the app.'],
   aprender: ['Aprender jugando: ¿tendencia o ruido?', 'Learn by playing: trend or noise?'],
   proyecto: ['Aquí está todo el proyecto y el equipo.', 'Here is the whole project and the team.'],
 };
@@ -29,7 +31,7 @@ export default function Sidebar() {
   return (
     <aside className={'sidebar' + (collapsed ? ' min' : '')} aria-label={L('Menú principal', 'Main menu')}>
       <div className="sb-top">
-        <button className="sb-brand" onClick={() => setView('inicio')} aria-label={L('Ir al inicio', 'Go to home')}><span className="sb-logo"><IconSatellite size={20} /></span>{!collapsed && <b>TerraScope</b>}</button>
+        <button className="sb-brand" onClick={() => setView('inicio')} aria-label={L('Ir al inicio', 'Go to home')}><span className="sb-logo"><img src={logo} alt="" /></span>{!collapsed && <b>TerraScope</b>}</button>
         <button className="sb-toggle" onClick={() => setCollapsed(!collapsed)} aria-label={collapsed ? L('Expandir menú', 'Expand menu') : L('Contraer menú', 'Collapse menu')}>{collapsed ? <IconLayoutSidebarLeftExpand size={18} /> : <IconLayoutSidebarLeftCollapse size={18} />}</button>
       </div>
       <nav className="sb-nav">
@@ -37,7 +39,7 @@ export default function Sidebar() {
         {GROUPS.map(([[es, en], ids]) => <div key={es} className="sb-group">{!collapsed && <small>{lang === 'es' ? es : en}</small>}{ids.map(item)}</div>)}
       </nav>
       <div className="sb-killa">
-        <Killa estado={estado} size={collapsed ? 56 : 112} />
+        <Killa estado={estado} size={collapsed ? 60 : 150} />
         {!collapsed && msg && <motion.p key={msg} className="sb-say" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>{msg}</motion.p>}
       </div>
     </aside>

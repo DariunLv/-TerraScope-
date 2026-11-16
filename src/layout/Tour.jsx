@@ -45,7 +45,7 @@ export default function Tour() {
     <AnimatePresence>{open && (
       <motion.aside className="tour" role="dialog" aria-label={L('Recorrido guiado', 'Guided tour')} initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 40 }}>
         <button className="tour-x" onClick={close} aria-label={L('Cerrar', 'Close')}><IconX size={18} /></button>
-        <div className="tour-killa"><Killa estado={step < n ? S[step].pose : sent ? 'celebrando' : 'duda'} size={104} /></div>
+        <div className="tour-killa"><Killa estado={step < n ? S[step].pose : sent ? 'celebrando' : 'duda'} size={136} /></div>
         <div className="tour-dots">{[...S, 0].map((_, i) => <i key={i} className={i <= step ? 'on' : ''} />)}</div>
         {step < n ? (<>
           <b>{S[step].t}</b><p>{S[step].d}</p>

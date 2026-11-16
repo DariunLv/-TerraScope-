@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import Ghost from '../../ui/Ghost';
 import SpotlightCard from '../../ui/SpotlightCard';
 import { useT } from '../../core/i18n';
 import { useTheme } from '../../core/palette';
@@ -15,7 +16,7 @@ export default function Bento() {
     <div className="bento">
       {t.learnBento.map((c, i) => { const X = V[i]; return (
         <motion.div key={c.title} className={'bi b' + i} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
-          <SpotlightCard theme={theme} className="bcard"><div className="bviz"><X /></div><h3 style={{ margin: '8px 0 2px' }}>{c.title}</h3><p className="mini" style={{ fontSize: 14, margin: 0 }}>{c.description}</p></SpotlightCard>
+          <SpotlightCard theme={theme} className="bcard"><Ghost k={['trend','sun','shield','brain','book','radar'][i % 6]} i={i} size={120} pos={i} /><div className="bviz"><X /></div><h3 style={{ margin: '8px 0 2px' }}>{c.title}</h3><p className="mini" style={{ fontSize: 14, margin: 0 }}>{c.description}</p></SpotlightCard>
         </motion.div>); })}
     </div>
   );

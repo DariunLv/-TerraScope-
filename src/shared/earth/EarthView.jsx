@@ -3,6 +3,7 @@
    mode="explore" explorador: capas satelitales de la NASA por fecha y eventos naturales en vivo
    mode="lakes"   lagos del Perú: inventario, imágenes por año y comparación de dos años con cortina */
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Button, Select, Slider, Switch, SegmentedControl } from '@mantine/core';
 import { IconFlask, IconPlus, IconMinus, IconHandFinger, IconWorld, IconWifiOff, IconExternalLink, IconX, IconArrowsHorizontal, IconTags, IconRotate360, IconFlag, IconCamera } from '@tabler/icons-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -53,7 +54,8 @@ export default function EarthView({ mode = 'hero', points, uncovered, alerts }) 
   const [year, setYear] = useState(LASTY), [year2, setYear2] = useState(2001), [compare, setCompare] = useState(false), [pos, setPos] = useState(0.5);
   const [labelsOn, setLabelsOn] = useState(true), [spinOn, setSpinOn] = useState(mode !== 'lakes'), [country, setCountry] = useState(null), langR = useRef(lang);
   langR.current = lang;
-  const [flash, setFlash] = useState(false);
+  const [flash, setFlash] = useState(false), [light, setLight] = useState(false), [tilt, setTilt] = useState(false);
+  const wrapCard = (node) => { if (mode !== 'hero') return node; const host = typeof document !== 'undefined' && document.querySelector('.hero-space'); return host ? createPortal(node, host) : node; };
   const [evOn, setEvOn] = useState(false), [evState, setEvState] = useState(null), [ev, setEv] = useState(null);
   const def = layerById(layerId), FAR = mode === 'explore' ? 2.25e7 : mode === 'hero' ? 7.2e6 : 1.15e7; // altura inicial de la cámara
 
@@ -63,12 +65,12 @@ export default function EarthView({ mode = 'hero', points, uncovered, alerts }) 
     try {
       v = new C.Viewer(el.current, {
         animation: false, timeline: false, baseLayerPicker: false, geocoder: false, homeButton: false, sceneModePicker: false, navigationHelpButton: false, fullscreenButton: false, infoBox: false, selectionIndicator: false,
-        scene3DOnly: true, skyBox: false, showRenderLoopErrors: false, contextOptions: { webgl: { alpha: true, preserveDrawingBuffer: true } },
+        scene3DOnly: true, skyBox: mode === 'hero' ? false : undefined, showRenderLoopErrors: false, contextOptions: { webgl: { alpha: true, preserveDrawingBuffer: true } },
         baseLayer: C.ImageryLayer.fromProviderAsync(C.TileMapServiceImageryProvider.fromUrl(C.buildModuleUrl('Assets/Textures/NaturalEarthII'))),
       });
     } catch (e) { console.warn('Cesium', e); setDead(true); return undefined; }
     V.current = v; const sc = v.scene;
-    sc.backgroundColor = mode === 'hero' ? C.Color.TRANSPARENT : col('#e4f0fa'); sc.globe.baseColor = mode === 'hero' ? col('#0a2f5c') : col('#cfe5f5'); if (sc.sun) sc.sun.show = false; if (sc.moon) sc.moon.show = false; sc.globe.enableLighting = false; sc.requestRenderMode = true; sc.fog.enabled = false; sc.globe.showGroundAtmosphere = mode === 'hero';
+    sc.backgroundColor = mode === 'hero' ? C.Color.TRANSPARENT : col('#02040c'); sc.globe.baseColor = col('#0a2f5c'); if (sc.sun) sc.sun.show = mode !== 'hero'; if (sc.moon) sc.moon.show = mode !== 'hero'; if (sc.skyAtmosphere) sc.skyAtmosphere.show = true; sc.globe.enableLighting = false; sc.requestRenderMode = true; sc.fog.enabled = false; sc.globe.showGroundAtmosphere = mode === 'hero';
     sc.screenSpaceCameraController.minimumZoomDistance = 12000; sc.screenSpaceCameraController.maximumZoomDistance = 3.6e7;
     if (window.innerWidth > 720) { v.useBrowserRecommendedResolution = false; v.resolutionScale = Math.min(window.devicePixelRatio || 1, 1.5); }
     v.cesiumWidget.screenSpaceEventHandler.removeInputAction(C.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
@@ -188,6 +190,9 @@ export default function EarthView({ mode = 'hero', points, uncovered, alerts }) 
     return () => { dead2 = true; };
   }, [ready, evOn, lang]);
 
+  useEffect(() => { const v = V.current; if (!ready || !v) return; v.scene.globe.enableLighting = light; if (light) { v.clock.currentTime = C.JulianDate.now(); v.clock.shouldAnimate = false; } v.scene.requestRender(); }, [light, ready]);
+  const flyTo = (lon, lat, h) => { const v = V.current; if (!v) return; spin.current = false; setSpinOn(false); v.camera.flyTo({ destination: C.Cartesian3.fromDegrees(lon, lat - (tilt ? 4 : 0), h), orientation: { heading: 0, pitch: C.Math.toRadians(tilt ? -42 : -90), roll: 0 }, duration: 2.6 }); };
+  const toggleTilt = () => { const v = V.current; if (!v) return; const n = !tilt; setTilt(n); const cp = v.camera.positionCartographic; v.camera.flyTo({ destination: C.Cartesian3.fromRadians(cp.longitude, cp.latitude - (n ? 0.08 : 0), cp.height), orientation: { heading: 0, pitch: C.Math.toRadians(n ? -40 : -90), roll: 0 }, duration: 1.6 }); };
   const photo = () => {
     const v = V.current, cp = v?.camera.positionCartographic; if (!v) return;
     const lyr = mode === 'lakes' ? (layerId === 'base' ? L('Mapa de lagos del Perú', 'Map of Peru’s lakes') : `${def[lang][0]} · ${compare ? `${year2} ${L('frente a', 'vs')} ${year}` : year}`) : `${def[lang][0]}${def.fixed ? '' : ' · ' + date}`;
@@ -205,6 +210,7 @@ export default function EarthView({ mode = 'hero', points, uncovered, alerts }) 
           <Select w={280} label={L('Capa satelital de la NASA', 'NASA satellite layer')} data={LAYERS.map((l) => ({ value: l.id, label: l[lang][0] }))} value={layerId} onChange={(x) => x && setLayerId(x)} allowDeselect={false} comboboxProps={{ zIndex: 400 }} />
           <Select w={200} searchable clearable label={L('Ir a un país', 'Go to a country')} placeholder={L('Escribe un país…', 'Type a country…')} leftSection={<IconFlag size={15} />} data={COUNTRIES.map((c) => ({ value: c.id, label: cname(c, lang) })).sort((a, b) => a.label.localeCompare(b.label, lang))} value={country?.id || null} onChange={(id) => { const c = COUNTRIES.find((x) => x.id === id); V.current?.paintCountry(c || null, !!c); }} comboboxProps={{ zIndex: 400 }} />
           {!def.fixed && <label className="datefield"><span>{L('Fecha de la imagen', 'Image date')}</span><input type="date" value={date} min={`${def.from || 2000}-03-01`} max={isoDaysAgo(def.lag || 1)} onChange={(e) => e.target.value && setDate(e.target.value)} /></label>}
+          <Switch color="navy" checked={light} onChange={(e) => setLight(e.currentTarget.checked)} label={L('Día y noche (sol real)', 'Day and night (real sun)')} />
           <Switch color="navy" checked={evOn} onChange={(e) => setEvOn(e.currentTarget.checked)} label={L('Eventos naturales en curso', 'Ongoing natural events')} />
         </div>
       )}
@@ -224,10 +230,15 @@ export default function EarthView({ mode = 'hero', points, uncovered, alerts }) 
           <span className="splitlab" style={{ left: 12 }}>{year2}</span><span className="splitlab" style={{ right: 60 }}>{year}</span>
         </>)}
         <div className="gzoom"><button onClick={() => zoom(0.5)} aria-label="zoom in"><IconPlus size={18} /></button><button onClick={() => zoom(2)} aria-label="zoom out"><IconMinus size={18} /></button><button onClick={home} aria-label="home"><IconWorld size={18} /></button><button className={labelsOn ? 'on' : ''} onClick={() => setLabelsOn((x) => !x)} aria-label={L('Nombres de países', 'Country names')} title={L('Nombres de países', 'Country names')}><IconTags size={18} /></button><button onClick={photo} aria-label={L('Tomar foto del planeta', 'Take a photo of the planet')} title={L('Tomar foto del planeta (PNG)', 'Take a photo of the planet (PNG)')}><IconCamera size={18} /></button><button className={spinOn ? 'on' : ''} onClick={() => { spin.current = !spin.current; setSpinOn(spin.current); }} aria-label={L('Girar solo', 'Auto-rotate')} title={L('Girar solo', 'Auto-rotate')}><IconRotate360 size={18} /></button></div>
+        {mode === 'explore' && (
+          <div className="earthfly"><span><IconFlag size={13} /> {L('Volar a', 'Fly to')}</span>
+            {[['Titicaca', -69.35, -15.85, 4.5e5], ['Amazon', -62, -4, 2.2e6], ['Himalaya', 86, 28, 1.6e6], ['Sahara', 10, 24, 2.4e6], ['Great Barrier Reef', 147, -18, 1.6e6], ['Alps', 9, 46.5, 9e5], ['Aral Sea', 60, 45, 1.1e6], ['Greenland', -42, 72, 2.4e6]].map(([n, lo, la, h]) => <button key={n} onClick={() => flyTo(lo, la, h)}>{n}</button>)}
+            <button className={tilt ? 'on' : ''} onClick={toggleTilt}><IconRotate360 size={13} /> {tilt ? L('Vista cenital', 'Top view') : L('Inclinar 3D', '3D tilt')}</button>
+          </div>)}
         {tip && <div className="gtip earthtip" style={{ left: tip.x + 12, top: tip.y + 12 }}>{tip.name}{tip.sub && <small>{tip.sub}</small>}</div>}
         {!net && <div className="earthnote"><IconWifiOff size={15} /> {L('No se pudo cargar esta capa (sin internet o sin imagen para esa fecha). Ves el relieve incluido.', 'This layer could not load (offline or no image for that date). You see the built-in relief.')}</div>}
         {mode === 'hero' && <div className="hint light"><IconHandFinger size={15} /> {L('Gira, acerca y toca cualquier país o punto del planeta; doble toque para volar a un país', 'Spin, zoom and tap any country or point; double-tap to fly to a country')}</div>}
-        {mode !== 'lakes' && (
+        {mode !== 'lakes' && wrapCard(
           <AnimatePresence mode="wait">
             {ev ? (
               <motion.div key={ev.id} className="gcard" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>

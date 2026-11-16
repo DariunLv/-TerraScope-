@@ -25,7 +25,7 @@ export default function Interpret({ title, facts, plain, how, next }) {
       <AnimatePresence>{st === 'open' && (
         <motion.div className="interp-t" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
           <div className="interp-in">
-            <Rich text={txt.replace(/\*\*/g, '').replace(/\s*(Cómo se lee:|Qué dice aquí:|Ojo:|Siguiente paso:|How to read it:|What it says here:|Careful:|Next step:)/g, '\n**$1** ')} />
+            <Rich text={txt.replace(/\*\*/g, '').replace(/\s*(Qué es:|Cómo se lee:|Qué dice aquí:|Por qué importa:|Ojo:|Siguiente paso:|What it is:|How to read it:|What it says here:|Why it matters:|Careful:|Next step:)/g, '\n**$1** ')} />
             <small>{ai ? L('Explicado por Killa con los números de este gráfico.', 'Explained by Killa using this chart’s numbers.') : L('Explicación básica (la IA no respondió).', 'Basic explanation (the AI did not answer).')}</small>
           </div>
         </motion.div>)}</AnimatePresence>

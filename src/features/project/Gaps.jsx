@@ -1,4 +1,5 @@
 import { Tabs } from '@mantine/core';
+import Ghost from '../../ui/Ghost';
 import { IconAlertTriangle, IconBook2, IconBulb, IconTool, IconCircleCheck } from '@tabler/icons-react';
 import { motion } from 'framer-motion';
 import { GAPS, REFS } from './gapsData';
@@ -18,6 +19,7 @@ export default function Gaps() {
             <div className="gapgrid">
               {g.items.map((it, i) => (
                 <motion.div key={lang + g.scale + i} className="card gapcard" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
+                  <Ghost k={['alert','radar','sun','snow'][i % 4]} i={i} size={130} pos={i + 1} />
                   <h3><IconAlertTriangle size={18} color="#c2410c" style={{ verticalAlign: '-3px', marginRight: 6 }} />{it.gap}</h3>
                   <Row I={IconBook2} c="ev" label={L('Evidencia', 'Evidence')}>{rich(it.ev)}</Row>
                   <Row I={IconBulb} c="how" label={L('Cómo lo resolvemos', 'How we solve it')}>{it.how}</Row>

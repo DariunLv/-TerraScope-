@@ -69,3 +69,5 @@ export function parseLakes(text) {
   return rows.slice(1).map((r, i) => { const c = r.split(sep), lat = numf(c[ix.lat]), lon = numf(c[ix.lon]), alt = ix.alt >= 0 ? numf(c[ix.alt]) || 0 : 0, area = ix.area >= 0 ? numf(c[ix.area]) || 0.1 : 0.1;
     return { id: 'u' + i, name: ix.name >= 0 ? String(c[ix.name]).replace(/"/g, '').trim() : `Lago ${i + 1}`, lat, lon, alt, area, dep: ix.dep >= 0 ? String(c[ix.dep]).replace(/"/g, '').trim() : '—', type: guess(ix.type >= 0 ? c[ix.type] : '', alt), vert: ix.vert >= 0 ? String(c[ix.vert]).replace(/"/g, '').trim() : '—' }; }).filter((l) => !isNaN(l.lat) && !isNaN(l.lon) && Math.abs(l.lat) <= 90 && Math.abs(l.lon) <= 180);
 }
+
+export const vertName = (v, lang) => (lang === 'es' ? v : ({ Atlántico: 'Atlantic', Pacífico: 'Pacific' }[v] || v));

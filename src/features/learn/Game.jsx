@@ -1,4 +1,5 @@
 /* Aprender: ruta de lecciones interactivas, práctica, glosario y quiz. El progreso se guarda en este navegador. */
+import Ghost from '../../ui/Ghost';
 import { useEffect, useMemo, useState } from 'react';
 import { Tabs, Progress, TextInput, Button } from '@mantine/core';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -58,7 +59,7 @@ function Quiz({ L, lang, best, onFinish }) {
   const again = () => { setK(0); setPick(null); setScore(0); setFin(false); };
   if (fin) return (<div className="card panel" style={{ textAlign: 'center' }}><KillaSay size={130} estado={score >= 6 ? 'celebrando' : 'ensenando'} text={score >= 6 ? L('¡Muy bien, detective!', 'Well done, detective!') : L('Repasa las lecciones y vuelve a intentarlo.', 'Review the lessons and try again.')} />
     <h2 style={{ fontSize: 28 }}>{score} / {QUIZ.length}</h2><p className="mini">{L('Mejor resultado', 'Best score')}: {Math.max(best || 0, score)} / {QUIZ.length}</p><Button color="forest" onClick={again}>{L('Intentar de nuevo', 'Try again')}</Button></div>);
-  return (<div className="card panel quiz">
+  return (<div className="card panel quiz"><Ghost k="brain" i={1} size={190} pos={1} />
     <div className="q-top"><span className="mini">{L('Pregunta', 'Question')} {k + 1} / {QUIZ.length}</span><Progress value={((k + (pick !== null ? 1 : 0)) / QUIZ.length) * 100} color="forest" size="sm" style={{ flex: 1 }} /></div>
     <h3>{q[i]}</h3>
     <div className="ls-opts">{q[2].map((o, j) => <button key={j} disabled={pick !== null} className={'ls-o' + (pick !== null ? (j === q[3] ? ' good' : pick === j ? ' bad' : '') : '')} onClick={() => { setPick(j); if (j === q[3]) setScore((s) => s + 1); }}>{o[i]}</button>)}</div>
@@ -77,7 +78,7 @@ export default function Game() {
   return (
     <section id="aprende"><div className="wrap">
       <PageHead icon={IconSchool} tone="navy" eyebrow={L('Aprender', 'Learn')} title={t.learnTitle} sub={L('Seis lecciones con simulaciones para distinguir una tendencia real del ruido, entender el valor p y no confundir clima con nivel del lago.', 'Six lessons with simulations to tell a real trend from noise, understand the p-value and not confuse climate with lake level.')} />
-      <div className="card panel lrn-hero">
+      <div className="card panel lrn-hero"><Ghost k="book" i={0} size={200} pos={0} />
         <div className="lrn-say"><Killa estado={nDone === LESSONS.length ? 'celebrando' : 'ensenando'} size={74} live={false} shadow={false} tap={false} /><p>{say}</p></div>
         <div className="lrn-prog">
           <div className="lrn-lv"><IconTrophy size={20} /><b>{LEVELS[lvl][lang === 'es' ? 0 : 1]}</b></div>

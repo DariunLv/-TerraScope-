@@ -1,3 +1,4 @@
+import { useStore } from '../../core/store';
 import Interpret from '../../shared/Interpret';
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { Tabs, Loader, Select, Table, Badge, Button, Alert } from '@mantine/core';
@@ -310,7 +311,7 @@ export default function Analytics({ cur, res }) {
     [L('Relaciones', 'Relations'), [['rel', IconGitCompare, L('Entre variables', 'Between variables'), Relations], ['mem', IconRipple, L('Memoria', 'Memory'), Memory]]],
     [L('Datos', 'Data'), [['day', IconBolt, L('Serie diaria', 'Daily series'), Daily], ['val', IconRuler2, L('Validar con estación', 'Validate with station'), Validation], ['sum', IconTable, L('Tabla resumen', 'Summary table'), Summary]]],
   ];
-  const [g, setG] = useState('0'); const [tab, setTab] = useState('series');
+  const ai = useStore.getState().anInit; const [g, setG] = useState(ai === 'seas' ? '1' : '0'); const [tab, setTab] = useState(ai || 'series');
   const tabs = G[+g][1], act = tabs.find((x) => x[0] === tab) || tabs[0], C = act[3];
   return (
     <div>

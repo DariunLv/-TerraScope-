@@ -1,7 +1,12 @@
 import saLogo from '../../assets/spaceapps.png';
+import Drip from '../../ui/Drip';
+import Ghost from '../../ui/Ghost';
+import About from './About';
 import TechText from '../../components/reactbits/TechText/TechText';
 import TextLoop from '../../components/reactbits/TextLoop/TextLoop';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
+import useFx from '../../ui/useFx';
+const GhostFibers = lazy(() => import('../../components/reactbits/GhostFibers/GhostFibers'));
 import { motion } from 'framer-motion';
 import { Select, Button } from '@mantine/core';
 import { IconWorldSearch, IconFlask, IconRipple, IconSearch, IconArrowRight, IconRadar2, IconCrystalBall, IconSatellite, IconStack2, IconShieldCheck, IconMessageChatbot, IconFlame, IconEqual, IconSunHigh, IconFingerprint } from '@tabler/icons-react';
@@ -20,6 +25,7 @@ import { PLACES } from '../../lib/nasa/data';
 import { useStore } from '../../core/store';
 import { useT } from '../../core/i18n';
 export default function Hero() {
+  const fxOn = useFx();
   const { t, lang } = useT(); const L = (a, b) => (lang === 'es' ? a : b);
   const words = (t.line1 + ' ' + t.line2).toUpperCase().split(' '), cap = Math.ceil(words.join(' ').length / 3) + 1, rows = [''];
   words.forEach((w) => { const c = rows[rows.length - 1]; if (c && (c + ' ' + w).length > cap && rows.length < 3) rows.push(w); else rows[rows.length - 1] = c ? c + ' ' + w : w; });
@@ -51,25 +57,28 @@ export default function Hero() {
           <ul className="hero-badges" hidden><li><IconShieldCheck size={18} />{L('Semáforo y alertas', 'Traffic light and alerts')}</li><li><IconCrystalBall size={18} />{L('Tres futuros posibles', 'Three possible futures')}</li><li><IconMessageChatbot size={18} />{L('Asistente que responde', 'Assistant that answers')}</li></ul>
         </div>
         </div></div></div>
+      <Drip />
+      <About />
       <div className="wrap" style={{ position: 'relative' }}>
         <div className="paths">
           {paths.map(([I, a, b, v], i) => (
             <motion.div key={v} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
               <SpotlightCard theme="light" className="pathcard" onClick={() => setView(v)}>
-                <div className="icobox"><I size={28} /></div><h3>{a}</h3><p className="mini" style={{ fontSize: 14 }}>{b}</p><span className="go">{L('Entrar', 'Enter')} <IconArrowRight size={16} /></span>
+                <Ghost k={['globe', 'flask', 'calm'][i % 3]} i={i + 1} size={130} /><div className="icobox"><I size={28} /></div><h3>{a}</h3><p className="mini" style={{ fontSize: 14 }}>{b}</p><span className="go">{L('Entrar', 'Enter')} <IconArrowRight size={16} /></span>
               </SpotlightCard>
             </motion.div>
           ))}
         </div>
       </div>
       <div className="band deep">
+        {fxOn && <Suspense fallback={null}><div className="band-gl"><GhostFibers glowColor="#34d399" lineColor="#a7f3d0" secondaryColor="#7dd3fc" speed={0.4} threads={60} fiberStyle="dots" mouseInteraction={false} pulseOnClick={false} grain={0.02} dpr={1} /></div></Suspense>}
         <div className="wrap">
           <div className="band-head"><span className="ph-eyebrow light"><IconShieldCheck size={16} />{L('Del dato a la decisión', 'From data to decision')}</span>
             <h2 className="band-title">{L('No solo mostramos datos: te decimos qué hacer', 'We do not just show data: we tell you what to do')}</h2>
             <p className="band-sub">{L('Para cada lago o lugar la app calcula un semáforo, compara qué pasaría si ocurre algo peligroso, si no ocurre nada o si todo está tranquilo, y responde tus preguntas.', 'For each lake or place the app computes a traffic light, compares what would happen if something dangerous happens, nothing happens or all stays calm, and answers your questions.')}</p></div>
           <div className="trio">
             {[[IconFlame, L('Sequía y calor', 'Drought and heat'), L('Si ocurre algo peligroso: cuánta agua faltaría y qué hacer antes.', 'Severe drought and heat: how much water would be short and what to do first.'), '#fca5a5'], [IconEqual, L('Clima reciente', 'Recent climate'), L('Si no ocurre nada nuevo: ¿alcanza el agua o ya hay una tendencia?', 'Recent climate repeats: is there enough water or is there already a trend?'), '#bfdbfe'], [IconSunHigh, L('Año húmedo', 'Wet year'), L('Si todo está tranquilo: cuánto se recupera y cómo aprovecharlo.', 'A wet year: how much recovers and how to use it.'), '#86efac']].map(([I, a, b, c], i) => (
-              <motion.div key={a} className="trio-c" style={{ '--c': c }} initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}><span><I size={26} /></span><h3>{a}</h3><p>{b}</p></motion.div>))}
+              <motion.div key={a} className="trio-c" style={{ '--c': c }} initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}><Ghost k={['fire', 'calm', 'sun'][i]} i={i} size={150} /><span><I size={26} /></span><h3>{a}</h3><p>{b}</p></motion.div>))}
           </div>
           <Button size="xl" radius="xl" className="cta-light" rightSection={<IconArrowRight size={22} />} onClick={() => { setLake('titicaca'); setView('decidir'); }}>{L('Probar con el lago Titicaca', 'Try it with Lake Titicaca')}</Button>
         </div>
@@ -79,14 +88,13 @@ export default function Hero() {
         <div className="smart">
           {smart.map(([I, a, b, v], i) => (
             <motion.button key={a} className="smartc" onClick={() => setView(v)} initial={{ opacity: 0, y: 26, scale: 0.97 }} whileInView={{ opacity: 1, y: 0, scale: 1 }} whileHover={{ y: -4 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }}>
-              <span className="smarti"><I size={22} /></span><b>{a}</b><span>{b}</span>
+              <Ghost k={['radar', 'rain', 'ai', 'shield', 'leaf', 'snow'][i % 6]} i={i} size={110} /><span className="smarti"><I size={22} /></span><b>{a}</b><span>{b}</span>
             </motion.button>
           ))}
         </div>
       </div>
       <div className="band stats-band"><div className="wrap"><div className="stats big">{nums.map(([n, p, label, suf], i) => <div key={i} className="stat card"><b className="num">{p}<CountUp to={n} duration={1.6} delay={0.3 + i * 0.15} />{suf && <small>{suf}</small>}</b><span>{label}</span></div>)}</div></div></div>
       <div className="marq marq-tl"><TextLoop text="NASA POWER ✦ GIBS ✦ EONET ✦ Earthdata ✦ SMAP ✦ FIRMS ✦ SWOT ✦ MODIS ✦ GPM ✦ Landsat ✦ Sentinel-2" shape="wave" speed={60} fontSize={26} fontWeight={800} letterSpacing={3} color="#0c5a43" ribbon={false} curviness={40} pauseOnHover /></div>
-      <div className="marq" hidden><ScrollVelocity texts={['NASA POWER · GIBS · EONET · Earthdata CMR · EPIC · SMAP · FIRMS · SWOT · OPERA · MODIS · GPM · Landsat · Sentinel-2 ·']} velocity={28} className="marqt" /></div>
     </section>
   );
 }

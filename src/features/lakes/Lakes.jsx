@@ -1,4 +1,5 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
+import Ghost from '../../ui/Ghost';
 import { Button, Select, Slider, Table, Alert, Loader, Progress } from '@mantine/core';
 import { IconFlask, IconDatabase, IconMountain, IconMapPins, IconDropletSearch, IconUpload, IconCalculator, IconRadar2, IconScale, IconSatellite, IconMessageReport, IconRestore, IconRipple } from '@tabler/icons-react';
 import PageHead from '../../layout/PageHead';
@@ -6,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import * as S from '../../lib/analysis/stats';
 import { bh } from '../../lib/analysis/advanced';
 import { V, power, demo } from '../../lib/nasa/data';
-import { LAKES as REF_LAKES, TYPES, BANDS, band, SAMPLE_POINTS, km, parsePoints, parseLakes } from './lakesData';
+import { LAKES as REF_LAKES, TYPES, BANDS, band, SAMPLE_POINTS, km, parsePoints, parseLakes , vertName } from './lakesData';
 import { Balance, Watch, Satellites, Reports } from './LakeTools';
 import { LEVELS } from './lakeclim';
 import { useStore } from '../../core/store';
@@ -24,7 +25,7 @@ function Inventory({ L, lang, setLake, lake }) {
   const { lakes: LAKES, setLakes, lakesSrc } = useStore(); const [bad, setBad] = useState(false);
   const onFile = async (e) => { const f = e.target.files?.[0]; if (!f) return; const l = parseLakes(await f.text()); if (l.length) { setLakes(l, f.name); setBad(false); useStore.getState().sayKilla('confirmado', `${l.length} lagos cargados.`); } else { setBad(true); useStore.getState().sayKilla('sin-datos', 'No encontré lagos en ese archivo.'); } e.target.value = ''; };
   const rows = [...LAKES].sort((a, b) => b.area - a.area);
-  const sun = useMemo(() => { const by = {}; LAKES.forEach((l) => { by[l.vert] = by[l.vert] || {}; by[l.vert][l.type] = (by[l.vert][l.type] || 0) + 1; }); return Object.entries(by).map(([v, ty]) => ({ name: v, children: Object.entries(ty).map(([k, n]) => ({ name: TYPES[k][lang === 'es' ? 0 : 1], value: n, itemStyle: { color: TYPES[k][2] } })) })); }, [lang, LAKES]);
+  const sun = useMemo(() => { const by = {}; LAKES.forEach((l) => { by[l.vert] = by[l.vert] || {}; by[l.vert][l.type] = (by[l.vert][l.type] || 0) + 1; }); return Object.entries(by).map(([v, ty]) => ({ name: vertName(v, lang), children: Object.entries(ty).map(([k, n]) => ({ name: TYPES[k][lang === 'es' ? 0 : 1], value: n, itemStyle: { color: TYPES[k][2] } })) })); }, [lang, LAKES]);
   const o = { tooltip: { trigger: 'item' }, series: [{ type: 'sunburst', data: sun, radius: ['18%', '92%'], itemStyle: { borderColor: '#fff', borderWidth: 2 }, label: { fontSize: 11, color: '#fff' }, levels: [{}, { itemStyle: { color: '#1e3a8a' }, label: { rotate: 'tangential' } }, {}], emphasis: { focus: 'ancestor' } }] };
   return (
     <div className="two">
@@ -35,7 +36,7 @@ function Inventory({ L, lang, setLake, lake }) {
       <div><h4 className="sh">{L('Vertiente y tipo (número de lagos)', 'Drainage basin and type (number of lakes)')}</h4><EChart option={o} deps={[lang, LAKES]} h={330} /></div>
       <div style={{ gridColumn: '1 / -1' }}><h4 className="sh">{L('Inventario de referencia', 'Reference inventory')}</h4>
         <div className="tablewrap"><Table fz="sm" verticalSpacing={4} highlightOnHover stickyHeader><Table.Thead><Table.Tr><Table.Th>{L('Nombre', 'Name')}</Table.Th><Table.Th>{L('Región', 'Region')}</Table.Th><Table.Th>{L('Tipo', 'Type')}</Table.Th><Table.Th>{L('Altitud (m)', 'Altitude (m)')}</Table.Th><Table.Th>{L('Área (km²)', 'Area (km²)')}</Table.Th><Table.Th>{L('Vertiente', 'Basin')}</Table.Th></Table.Tr></Table.Thead>
-          <Table.Tbody>{rows.slice(0, 400).map((l) => <Table.Tr key={l.id} onClick={() => setLake(l.id)} style={{ cursor: 'pointer', background: l.id === lake ? '#e6f5ef' : undefined }}><Table.Td><i className="dot" style={{ background: TYPES[l.type][2] }} />{l.name}</Table.Td><Table.Td>{l.dep}</Table.Td><Table.Td>{TYPES[l.type][lang === 'es' ? 0 : 1]}</Table.Td><Table.Td>{l.alt}</Table.Td><Table.Td>{l.area}</Table.Td><Table.Td>{l.vert}</Table.Td></Table.Tr>)}</Table.Tbody></Table></div>
+          <Table.Tbody>{rows.slice(0, 400).map((l) => <Table.Tr key={l.id} onClick={() => setLake(l.id)} style={{ cursor: 'pointer', background: l.id === lake ? '#e6f5ef' : undefined }}><Table.Td><i className="dot" style={{ background: TYPES[l.type][2] }} />{l.name}</Table.Td><Table.Td>{l.dep}</Table.Td><Table.Td>{TYPES[l.type][lang === 'es' ? 0 : 1]}</Table.Td><Table.Td>{l.alt}</Table.Td><Table.Td>{l.area}</Table.Td><Table.Td>{vertName(l.vert, lang)}</Table.Td></Table.Tr>)}</Table.Tbody></Table></div>
         <Alert mt="sm" radius="lg" color={lakesSrc ? 'green' : 'blue'}>{lakesSrc ? L(`Usando ${LAKES.length} lagos del archivo ${lakesSrc}. Todo el módulo (planeta, vigía, cobertura y altitud) trabaja ahora con ese inventario.`, `Using ${LAKES.length} lakes from ${lakesSrc}. The whole module (planet, watch, coverage and altitude) now works with that inventory.`) : L('Inventario de referencia con valores aproximados, para demostrar la herramienta. Sube el inventario oficial de la ANA o de INAIGEM en CSV y todo el módulo se recalcula con él.', 'Reference inventory with approximate values, to demonstrate the tool. Upload the official ANA or INAIGEM inventory as CSV and the whole module recomputes with it.')} {!lakesSrc && <>{L('Plantillas:', 'Templates:')} <a href={`${import.meta.env.BASE_URL}plantillas/lagos-plantilla.csv`} download>{L('lagos', 'lakes')}</a> · <a href={`${import.meta.env.BASE_URL}plantillas/puntos-plantilla.csv`} download>{L('puntos de monitoreo', 'monitoring points')}</a></>}</Alert>
         <div className="row" style={{ gap: 18, marginTop: 8 }}><label className="textlink"><IconUpload size={14} /> {L('Subir inventario oficial (CSV: nombre, lat, lon, altitud, area, region, tipo, vertiente)', 'Upload official inventory (CSV: name, lat, lon, altitude, area, region, type, basin)')}<input type="file" accept=".csv,.txt" hidden onChange={onFile} /></label>{lakesSrc && <button className="textlink" onClick={() => setLakes(REF_LAKES, '')}><IconRestore size={14} /> {L('Volver al inventario de referencia', 'Back to the reference inventory')}</button>}</div>
         {bad && <p className="wizerr">{L('No se pudo leer el archivo: necesita al menos las columnas lat y lon.', 'Could not read the file: it needs at least lat and lon columns.')}</p>}</div>
@@ -89,10 +90,10 @@ function Coverage({ L, lang, points, setPoints, radius, setRadius, stats, custom
       <label className="textlink"><IconUpload size={14} /> {L('Subir puntos de monitoreo (CSV)', 'Upload monitoring points (CSV)')}<input type="file" accept=".csv,.txt" hidden onChange={onFile} /></label>
     </div>
     <div className="kpis" style={{ marginTop: 12 }}>
-      <div className="kpi"><span>{L('Lagos con un punto cerca', 'Lakes with a nearby point')}</span><b>{Math.round(stats.cov)} %</b></div>
-      <div className="kpi"><span>{L('Lagos sin cobertura', 'Uncovered lakes')}</span><b style={{ color: '#dc2626' }}>{stats.unc.length}</b></div>
-      <div className="kpi"><span>{L('Distancia mediana al punto más cercano', 'Median distance to nearest point')}</span><b>{Math.round(stats.med)} km</b></div>
-      <div className="kpi"><span>{L('Lago más alejado', 'Most remote lake')}</span><b>{stats.far.name} ({Math.round(stats.far.d)} km)</b></div>
+      <div className="kpi"><Ghost k="globe" i={2} size={70} pos={0} /><span>{L('Lagos con un punto cerca', 'Lakes with a nearby point')}</span><b>{Math.round(stats.cov)} %</b></div>
+      <div className="kpi"><Ghost k="alert" i={1} size={70} pos={1} /><span>{L('Lagos sin cobertura', 'Uncovered lakes')}</span><b style={{ color: '#dc2626' }}>{stats.unc.length}</b></div>
+      <div className="kpi"><Ghost k="pin" i={3} size={70} pos={2} /><span>{L('Distancia mediana al punto más cercano', 'Median distance to nearest point')}</span><b>{Math.round(stats.med)} km</b></div>
+      <div className="kpi"><Ghost k="mountain" i={3} size={70} pos={3} /><span>{L('Lago más alejado', 'Most remote lake')}</span><b>{stats.far.name} ({Math.round(stats.far.d)} km)</b></div>
     </div>
     <div className="two" style={{ marginTop: 6 }}>
       <div><h4 className="sh">{L('Cobertura por franja de altitud', 'Coverage by altitude band')}</h4><EChart option={ob} deps={[stats, lang]} h={270} /></div>
@@ -145,18 +146,18 @@ export default function Lakes() {
     <section id="lagos"><div className="wrap">
       <PageHead icon={IconRipple} tone="navy" eyebrow={L('Plataforma de lagos', 'Lakes platform')} title={L('Lagos y lagunas del Perú', 'Lakes of Peru')} sub={L('Inventario, imágenes satelitales en el tiempo, clima de cada lago y estadística espacial en un solo lugar. Nuestro prototipo de una plataforma tipo LAGOS para el Perú.', 'Inventory, satellite imagery through time, each lake’s climate and spatial statistics in one place. Our prototype of a LAGOS-style platform for Peru.')} />
       <div className="lakekpis">
-        {[[LAKES.length, L('lagos y embalses en el inventario', 'lakes and reservoirs in the inventory')], [LAKES.filter((l) => l.alt >= 4000).length, L('están sobre los 4000 m', 'lie above 4000 m')], [Math.round(stats.cov), L(`% tiene un punto de monitoreo a menos de ${radius} km`, `% have a monitoring point within ${radius} km`)]].map(([n, l], i) => <div key={i} className="card stat"><b className="num"><CountUp to={n} duration={1.2} /></b><span>{l}</span></div>)}
+        {[[LAKES.length, L('lagos y embalses en el inventario', 'lakes and reservoirs in the inventory')], [LAKES.filter((l) => l.alt >= 4000).length, L('están sobre los 4000 m', 'lie above 4000 m')], [Math.round(stats.cov), L(`% tiene un punto de monitoreo a menos de ${radius} km`, `% have a monitoring point within ${radius} km`)]].map(([n, l], i) => <div key={i} className="card stat"><Ghost k={['water','mountain','sat'][i]} i={i+1} size={120} pos={i+3} /><b className="num"><CountUp to={n} duration={1.2} /></b><span>{l}</span></div>)}
       </div>
       <div className="lakegrid">
         <div className="card lakemap"><Earth mode="lakes" points={tab === 'cov' ? points : null} uncovered={uncovered} alerts={alerts} /></div>
-        <div className="card panel ficha">
+        <div className="card panel ficha"><Ghost k="pin" i={2} size={190} pos={0} />
           <Select searchable label={L('Elige un lago', 'Choose a lake')} data={LAKES.map((l) => ({ value: l.id, label: l.name }))} value={cur.id} onChange={(v) => v && setLake(v)} allowDeselect={false} />
           <AnimatePresence mode="wait">
             <motion.div key={cur.id} initial={{ opacity: 0, x: 14 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}>
               <h3 style={{ margin: '14px 0 2px', fontSize: 20 }}>{cur.name}</h3>
               <span className="stag" style={{ color: TYPES[cur.type][2], borderColor: TYPES[cur.type][2] }}>{TYPES[cur.type][lang === 'es' ? 0 : 1]}</span>
               <div className="fgrid">
-                <div><span>{L('Región', 'Region')}</span><b>{cur.dep}</b></div><div><span>{L('Vertiente', 'Basin')}</span><b>{cur.vert}</b></div>
+                <div><span>{L('Región', 'Region')}</span><b>{cur.dep}</b></div><div><span>{L('Vertiente', 'Basin')}</span><b>{vertName(cur.vert, lang)}</b></div>
                 <div><span>{L('Altitud', 'Altitude')}</span><b>{cur.alt} m</b></div><div><span>{L('Área aprox.', 'Approx. area')}</span><b>{cur.area} km²</b></div>
                 <div><span>{L('Coordenadas', 'Coordinates')}</span><b>{cur.lat}°, {cur.lon}°</b></div><div><span>{L('Punto de monitoreo más cercano', 'Nearest monitoring point')}</span><b>{Math.round(near.d)} km</b></div>
               </div>
@@ -166,7 +167,7 @@ export default function Lakes() {
           </AnimatePresence>
         </div>
       </div>
-      <div className="card panel" style={{ marginTop: 14 }}>
+      <div className="card panel" style={{ marginTop: 14 }}><Ghost k="calm" i={0} size={170} pos={1} />
         <h3>{L('Este lago', 'This lake')}: {cur.name}</h3>
         <div className="subtabs">{ONE.map(([v, I, l]) => <button key={v} className={one === v ? 'on' : ''} onClick={() => setOne(v)}><I size={15} />{l}</button>)}</div>
         <div style={{ paddingTop: 14 }}>
@@ -175,7 +176,7 @@ export default function Lakes() {
           {one === 'rep' && <Reports lake={cur} L={L} lang={lang} />}
         </div>
       </div>
-      <div className="card panel" style={{ marginTop: 14 }}>
+      <div className="card panel" style={{ marginTop: 14 }}><Ghost k="radar" i={1} size={170} pos={3} />
         <h3>{L('Todos los lagos: estadística espacial', 'All lakes: spatial statistics')}</h3>
         <div className="subtabs">{T.map(([v, I, l]) => <button key={v} className={tab === v ? 'on' : ''} onClick={() => setTab(v)}><I size={15} />{l}</button>)}</div>
         <div style={{ paddingTop: 14 }}>

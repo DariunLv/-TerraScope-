@@ -8,7 +8,7 @@ export const POSES = ['bienvenida', 'explorando', 'analizando', 'esperando', 'ha
 const FRIENDLY = { analizando: 'lupa', esperando: 'reloj', reintentar: 'duda', decidida: 'siguiente', alerta: 'sorpresa', triste: 'duda', tormenta: 'sorpresa', 'sin-conexion': 'duda', 'sin-datos': 'pista', avergonzada: 'riendo', titicaca: 'ubicacion' };
 const src = (e0) => { const e = FRIENDLY[e0] || e0; return `${import.meta.env.BASE_URL}killa/killa-${POSES.includes(e) ? e : 'bienvenida'}.webp`; };
 const _old = (e) => `${import.meta.env.BASE_URL}killa/killa-${POSES.includes(e) ? e : 'bienvenida'}.webp`;
-export const VIEW_POSE = { explorar: 'globo', lab: 'lupa', decidir: 'decidida', lagos: 'titicaca', aprender: 'ensenando', proyecto: 'bitacora' };
+export const VIEW_POSE = { explorar: 'globo', lab: 'lupa', decidir: 'decidida', lagos: 'titicaca', aprender: 'ensenando', killa: 'explicando', proyecto: 'bitacora' };
 const HAPPY = ['riendo', 'celebrando', 'sorpresa', 'idea', 'orgullosa', 'bienvenida'];
 
 export default function Killa({ estado = 'bienvenida', size = 144, alt = '', className = '', live = true, look = true, tap = true, shadow = true, flip = false, style }) {

@@ -23,6 +23,7 @@ const Lakes = lazy(() => import('./features/lakes/Lakes'));
 const Decide = lazy(() => import('./features/decide/Decide'));
 const Game = lazy(() => import('./features/learn/Game'));
 const Project = lazy(() => import('./features/project/Project'));
+const Ask = lazy(() => import('./features/ask/Ask'));
 /* Si una sección falla, el resto de la app sigue funcionando */
 class Guard extends Component {
   state = { bad: false, err: '' };
@@ -40,13 +41,19 @@ class Guard extends Component {
       <button className="textlink" style={{ margin: '8px auto 0' }} onClick={() => location.reload()}>{this.props.reload}</button></div>);
   }
 }
-const V = { inicio: Hero, explorar: WorldMap, lab: Lab, decidir: Decide, lagos: Lakes, aprender: Game, proyecto: Project };
+const V = { inicio: Hero, explorar: WorldMap, lab: Lab, decidir: Decide, lagos: Lakes, aprender: Game, proyecto: Project, killa: Ask };
 export default function App() {
   useEffect(() => { try { const v = new URLSearchParams(location.search).get('vista'); if (v && V[v]) useStore.setState({ view: v }); } catch { /* sin parámetros */ } }, []);
+  useEffect(() => { // precarga en reposo: el globo 3D y las vistas principales ya están listos cuando se abren
+    try { const c = navigator.connection; if (c && (c.saveData || /2g/.test(c.effectiveType || ''))) return; } catch { /* sin red info */ }
+    const run = () => { import('./shared/earth/EarthView'); import('./features/explore/WorldMap'); import('./features/lab/Lab'); import('./features/decide/Decide'); };
+    const id = window.requestIdleCallback ? window.requestIdleCallback(run, { timeout: 4000 }) : setTimeout(run, 2500);
+    return () => { try { window.cancelIdleCallback ? window.cancelIdleCallback(id) : clearTimeout(id); } catch { /* */ } };
+  }, []);
   useEffect(() => { startAgent(); const t = setTimeout(() => { try { sessionStorage.removeItem('ts_reload'); } catch { /* */ } }, 10000); const h = () => { if (!sessionStorage.getItem('ts_reload')) { try { sessionStorage.setItem('ts_reload', '1'); } catch { /* */ } location.reload(); } }; window.addEventListener('vite:preloadError', h); return () => { clearTimeout(t); window.removeEventListener('vite:preloadError', h); }; }, []);
   const practice = useStore((s) => s.practice), lakesL = useStore((s) => s.lakes);
   useEffect(() => { const t = setTimeout(() => { if (useStore.getState().agent.last) runCycle(); }, 800); return () => clearTimeout(t); }, [practice, lakesL]);
-  const fx = useFx(); const { t, lang } = useT(); const view = useStore((s) => s.view), collapsed = useStore((s) => s.collapsed); const C = V[view] || Hero, home = view === 'inicio';
+  const fx = useFx(); useEffect(() => { try { document.documentElement.lang = useStore.getState().lang; } catch { /* sin DOM */ } }, [useStore((s) => s.lang)]); const { t, lang } = useT(); const view = useStore((s) => s.view), collapsed = useStore((s) => s.collapsed); const C = V[view] || Hero, home = view === 'inicio';
   return (
     <ClickSpark sparkColor="#0c5a43" sparkSize={12} sparkRadius={22} sparkCount={9}>
       {fx && <Suspense fallback={null}><TargetCursor targetSelector=".mantine-Button-root, .mantine-Tabs-tab, .mantine-Paper-root, .mantine-Card-root, .mantine-Alert-root, .mantine-Badge-root, .mantine-SegmentedControl-root, .mantine-Accordion-item, .glass, [class*=card], .sc, .bigk, .kpi, .stat, .case, .pathcard, .trendk, .valk>div, .status, .pass, .alert, .interp-in, .vchip, .sb-item, .sb-killa, .coh, .gcard, .st-pill, .subtabs button, .pill, .band-card, .f50t, .f50g" cursorColor="#0c5a43" hideDefaultCursor={false} size={30} cornerSize={14} thickness={3} padding={8} blendMode="normal" showLabel={false} spinDuration={3} /></Suspense>}

@@ -1,38 +1,24 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import Ghost from '../../ui/Ghost';
 import { Button, Select, Progress, SegmentedControl } from '@mantine/core';
 import Earth from '../../shared/earth/Earth';
+import FlatMap from './FlatMap';
 import { IconRadar2, IconMap2, IconFlask, IconZoomIn, IconZoomOut, IconWorldSearch } from '@tabler/icons-react';
 import PageHead from '../../layout/PageHead';
 import { motion } from 'framer-motion';
 import * as d3 from 'd3';
-import { feature } from 'topojson-client';
-import world from '../../lib/geo/world110.json';
 import * as S from '../../lib/analysis/stats';
 import { bh } from '../../lib/analysis/advanced';
 import { V, KEYS, PLACES, power, demo } from '../../lib/nasa/data';
 import { useStore, placeLabel } from '../../core/store';
 import { useT } from '../../core/i18n';
 import { EChart, useWidth } from '../../shared/charts/hooks';
-const land = feature(world, world.objects.countries);
 const UP = '#c2410c', DOWN = '#1e40af';
 export default function WorldMap() {
   const { lang } = useT(); const L = (a, b) => (lang === 'es' ? a : b);
   const { place, setPlace, setMapOpen, scan, setScan, openCase, practice } = useStore();
   const [ref, w] = useWidth(); const h = Math.round(Math.min(560, Math.max(280, w * 0.52)));
-  const [mode, setMode] = useState('globe'); const [k, setK] = useState('T2M'); const [prog, setProg] = useState(null); const [tf, setTf] = useState(d3.zoomIdentity); const [hov, setHov] = useState(null);
-  const svg = useRef(null); const zoomB = useRef(null);
-  const proj = useMemo(() => d3.geoNaturalEarth1().fitSize([w, h], { type: 'Sphere' }), [w, h]);
-  const path = useMemo(() => d3.geoPath(proj), [proj]);
-  const paths = useMemo(() => ({ sphere: path({ type: 'Sphere' }), grat: path(d3.geoGraticule10()), land: land.features.map((f) => path(f)) }), [path]);
-  useEffect(() => {
-    zoomB.current = d3.zoom().scaleExtent([1, 8]).translateExtent([[0, 0], [w, h]]).on('zoom', (e) => setTf(e.transform));
-    d3.select(svg.current).call(zoomB.current).on('dblclick.zoom', null);
-  }, [w, h]);
-  const zoomBy = (f) => d3.select(svg.current).transition().duration(300).call(zoomB.current.scaleBy, f);
-  const click = (e) => {
-    const [x, y] = d3.pointer(e, svg.current), c = proj.invert(tf.invert([x, y]));
-    if (c && Math.abs(c[1]) <= 90 && Math.abs(c[0]) <= 180) setPlace({ id: 'custom', lat: +c[1].toFixed(2), lon: +c[0].toFixed(2) });
-  };
+  const [mode, setMode] = useState('globe'); const [k, setK] = useState('T2M'); const [prog, setProg] = useState(null); 
   const run = async () => {
     const out = []; let live = !practice, done = 0; setProg(0);
     const one = async (p) => {
@@ -49,9 +35,7 @@ export default function WorldMap() {
   };
   const res = scan && scan.k === k ? scan : null;
   const max = res ? d3.max(res.list, (d) => Math.abs(d.perDec)) || 1 : 1;
-  const rad = (d) => 5 + 11 * Math.sqrt(Math.abs(d.perDec) / max);
   const dots = res ? res.list : PLACES.map((p) => ({ id: p.id, lat: p.lat, lon: p.lon, name: p[lang] }));
-  const cur = proj([place.lon, place.lat]);
   const bar = res && { grid: { left: 150, right: 30, top: 6, bottom: 22 }, tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } }, xAxis: { type: 'value', axisLabel: { color: '#5b6b8c' }, splitLine: { lineStyle: { color: 'rgba(91,107,140,.18)' } } }, yAxis: { type: 'category', inverse: true, data: res.list.map((d) => d.name), axisLabel: { color: '#14213d', fontSize: 11, width: 140, overflow: 'truncate' } },
     series: [{ type: 'bar', data: res.list.map((d) => ({ value: +d.perDec.toFixed(4), itemStyle: { color: d.perDec >= 0 ? UP : DOWN, opacity: d.fdr ? 1 : 0.35, borderRadius: 4 } })) }] };
   const nUp = res ? res.list.filter((d) => d.fdr && d.perDec > 0).length : 0, nDn = res ? res.list.filter((d) => d.fdr && d.perDec < 0).length : 0;
@@ -68,20 +52,7 @@ export default function WorldMap() {
       {prog != null && <Progress value={prog} color="forest" mt={8} animated />}
       {mode === 'globe' && <div className="card mapcard globemode"><Earth mode="explore" /></div>}
       <div className="card mapcard" ref={ref} style={{ display: mode === 'map' ? 'block' : 'none' }}>
-        <svg ref={svg} width={w} height={h} onClick={click} style={{ display: 'block', cursor: 'crosshair', touchAction: 'none' }}>
-          <g transform={tf.toString()}>
-            <path d={paths.sphere} fill="#dcecf7" />
-            <path d={paths.grat} fill="none" stroke="#b9d3e6" strokeWidth={0.5 / tf.k} />
-            {paths.land.map((d, i) => <path key={i} d={d} fill="#f7f4ec" stroke="#9fb3a6" strokeWidth={0.6 / tf.k} />)}
-            {dots.map((d) => { const [x, y] = proj([d.lon, d.lat]); const r = (res ? rad(d) : 5) / Math.sqrt(tf.k); const col = res ? (d.perDec >= 0 ? UP : DOWN) : '#0c5a43'; return (
-              <g key={d.id} onClick={(e) => { e.stopPropagation(); setPlace({ id: d.id, lat: d.lat, lon: d.lon }); }} onMouseEnter={() => setHov(d)} onMouseLeave={() => setHov(null)} style={{ cursor: 'pointer' }}>
-                <circle cx={x} cy={y} r={r} fill={col} fillOpacity={res ? (d.fdr ? 0.9 : 0.15) : 0.85} stroke={col} strokeWidth={1.6 / tf.k} strokeDasharray={res && !d.fdr ? `${3 / tf.k} ${2 / tf.k}` : null} />
-              </g>); })}
-            {cur && <g pointerEvents="none"><circle cx={cur[0]} cy={cur[1]} r={11 / Math.sqrt(tf.k)} fill="none" stroke="#0b3d2e" strokeWidth={2.4 / tf.k} /><circle cx={cur[0]} cy={cur[1]} r={2.6 / Math.sqrt(tf.k)} fill="#0b3d2e" /></g>}
-          </g>
-        </svg>
-        <div className="mapzoom"><button onClick={() => zoomBy(1.6)} aria-label="zoom in"><IconZoomIn size={18} /></button><button onClick={() => zoomBy(1 / 1.6)} aria-label="zoom out"><IconZoomOut size={18} /></button></div>
-        {hov && <div className="maptip"><b>{hov.name}</b>{hov.perDec != null && <div>{hov.perDec > 0 ? '+' : ''}{hov.perDec.toFixed(V[k].d)} {V[k].u} / {L('década', 'decade')} · p {hov.p < 0.001 ? '< 0.001' : '= ' + hov.p.toFixed(3)} · {hov.fdr ? L('significativo (FDR)', 'significant (FDR)') : L('no significativo', 'not significant')}</div>}</div>}
+        {mode === 'map' && <FlatMap dots={dots} res={res} place={place} setPlace={setPlace} k={k} vlabel={V[k][lang][0]} />}
         <div className="mapsel"><span className="mini">{L('Tu punto', 'Your point')}</span><b>{placeLabel(place, PLACES, lang)}</b>
           <Button size="compact-sm" color="forest" mt={6} leftSection={<IconFlask size={14} />} onClick={() => openCase({ vars: [k, ...(k === 'T2M' ? ['PRECTOTCORR'] : ['T2M'])] }, place)}>{L('Investigar', 'Investigate')}</Button>
           <button className="textlink" onClick={() => setMapOpen(true)}><IconMap2 size={14} /> {L('Ver satélite', 'Satellite view')}</button></div>
@@ -89,7 +60,7 @@ export default function WorldMap() {
       </div>
       {res && (
         <motion.div className="two" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="card panel">
+          <div className="card panel"><Ghost k="globe" i={3} size={190} pos={3} />
             <h3>{L('Resultado del escaneo', 'Scan result')} · {V[k][lang][0]}</h3>
             <div className="kpis">
               <div className="kpi"><span>{L('Suben (significativo)', 'Rising (significant)')}</span><b style={{ color: UP }}>{nUp}</b></div>

@@ -19,7 +19,7 @@ function FitLine({ L }) {
   const lo = Math.min(...y) - 0.6, hi = Math.max(...y) + 0.6, X = (i) => 14 + (i / 29) * 372, Y = (v) => 150 - ((v - lo) / (hi - lo)) * 140;
   return (
     <div className="card panel" style={{ marginTop: 22, textAlign: 'center' }}>
-      <div style={{ display: 'flex', justifyContent: 'center' }}><Killa estado={score > 90 ? 'orgullosa' : 'ensenando'} size={110} /></div>
+      <div style={{ display: 'flex', justifyContent: 'center' }}><Killa estado={score > 90 ? 'orgullosa' : 'ensenando'} size={150} /></div>
       <h2 style={{ fontSize: 26 }}>{L('Tu turno: ajusta la línea de tendencia', 'Your turn: fit the trend line')}</h2>
       <p className="sub" style={{ margin: '0 auto' }}>{L('Mueve el control hasta que la línea pase lo más cerca posible de los puntos. Las barritas son el error: mientras más cortas, mejor.', 'Move the slider until the line runs as close to the points as possible. The small bars are the error: the shorter, the better.')}</p>
       <svg viewBox="0 0 400 160" style={{ width: '100%', maxWidth: 620, margin: '10px auto', display: 'block' }}>

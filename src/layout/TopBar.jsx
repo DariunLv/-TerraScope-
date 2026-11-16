@@ -1,16 +1,17 @@
 import { SegmentedControl, Switch, Tooltip } from '@mantine/core';
-import { IconSatellite, IconHome, IconWorldSearch, IconFlask, IconRipple, IconSchool, IconInfoCircle, IconShieldCheck } from '@tabler/icons-react';
+import logo from '../assets/logo.png';
+import { IconSatellite, IconHome, IconWorldSearch, IconFlask, IconRipple, IconSchool, IconInfoCircle, IconShieldCheck, IconRobot } from '@tabler/icons-react';
 import { useStore } from '../core/store';
 import { useT } from '../core/i18n';
 import { SentinelButton } from '../features/decide/AgentPanel';
-export const VIEWS = [['inicio', IconHome, 'Inicio', 'Home'], ['explorar', IconWorldSearch, 'Explorar', 'Explore'], ['lab', IconFlask, 'Laboratorio', 'Lab'], ['decidir', IconShieldCheck, 'Decidir', 'Decide'], ['lagos', IconRipple, 'Lagos', 'Lakes'], ['aprender', IconSchool, 'Aprender', 'Learn'], ['proyecto', IconInfoCircle, 'Proyecto', 'Project']];
+export const VIEWS = [['inicio', IconHome, 'Inicio', 'Home'], ['explorar', IconWorldSearch, 'Explorar', 'Explore'], ['lab', IconFlask, 'Laboratorio', 'Lab'], ['decidir', IconShieldCheck, 'Decidir', 'Decide'], ['lagos', IconRipple, 'Lagos', 'Lakes'], ['killa', IconRobot, 'Killa IA', 'Ask Killa'], ['aprender', IconSchool, 'Aprender', 'Learn'], ['proyecto', IconInfoCircle, 'Proyecto', 'Project']];
 export default function Nav() {
   const { t, lang } = useT(); const { setLang, view, setView, practice, setPractice } = useStore();
   return (<>
     <header className="nav">
       <div className="glass navbar">
         <div className="nav-in">
-          <b className="brand" onClick={() => setView('inicio')} style={{ cursor: 'pointer' }}><IconSatellite size={20} style={{ verticalAlign: '-4px', marginRight: 6 }} />{t.brand}</b>
+          <b className="brand" onClick={() => setView('inicio')} style={{ cursor: 'pointer' }}><img src={logo} alt="" className="tb-logo" />{t.brand}</b>
           <nav className="links">{VIEWS.map(([id, I, es, en]) => <button key={id} className={view === id ? 'on' : ''} onClick={() => setView(id)}><I size={16} />{lang === 'es' ? es : en}</button>)}</nav>
           <div className="row" style={{ gap: 10, flexWrap: 'nowrap' }}>
             <SentinelButton />

@@ -1,4 +1,5 @@
 /* Catálogo, acceso a NASA POWER y datos simulados (ESM). */
+import { useStore } from '../../core/store';
 
   var V = {
     T2M: { u: '°C', d: 2, rel: false, es: ['Temperatura del aire (2 m)', 'Qué tan cálido está el aire cerca del suelo.'], en: ['Air temperature (2 m)', 'How warm the air is near the ground.'] },
@@ -163,4 +164,6 @@ function demoDaily(lat, lon, key, y0, y1) {
 }
 var SRC = { ALLSKY_SFC_SW_DWN: 'CERES', CLOUD_AMT: 'CERES' };
 function sourceOf(k) { return k === 'CSV' ? 'CSV' : (SRC[k] || 'MERRA-2'); }
+/* Unidades según el idioma activo: 'día' en español, 'day' en inglés */
+for (const k of Object.keys(V)) { const u0 = V[k].u; if (/día/.test(u0)) Object.defineProperty(V[k], 'u', { get: () => (useStore.getState().lang === 'es' ? u0 : u0.replace('día', 'day')), enumerable: true }); }
 export { powerDaily, demoDaily, sourceOf, parseCsv, V, KEYS, PLACES, power, demo, powerUrl, parsePower };

@@ -18,7 +18,7 @@ export default function PageHead({ icon: I, eyebrow, title, sub, children, tone 
         {sub && <p className="ph-sub">{sub}</p>}
       </div>
       {children && <div className="ph-side">{children}</div>}
-      {est && <div className="ph-killa" aria-hidden="true"><Killa estado={est} size={176} /></div>}
+      {est && <div className="ph-killa" aria-hidden="true"><Killa estado={est} size={250} /></div>}
     </motion.header>
   );
 }
