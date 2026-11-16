@@ -7,7 +7,8 @@ const Galaxy = lazy(() => import('../components/reactbits/Galaxy/Galaxy'));
 const GhostFibers = lazy(() => import('../components/reactbits/GhostFibers/GhostFibers'));
 import { useStore } from '../core/store';
 import Killa, { VIEW_POSE } from '../killa/Killa';
-export default function PageHead({ icon: I, eyebrow, title, sub, children, tone = 'forest', pose }) {
+import Lot from '../ui/Lot';
+export default function PageHead({ icon: I, eyebrow, title, sub, children, tone = 'forest', pose, lot }) {
   const fx = useFx(), view = useStore((s) => s.view), est = pose || VIEW_POSE[view];
   return (
     <motion.header className={`pagehead ph-${tone}`} initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}>
@@ -18,6 +19,7 @@ export default function PageHead({ icon: I, eyebrow, title, sub, children, tone 
         {sub && <p className="ph-sub">{sub}</p>}
       </div>
       {children && <div className="ph-side">{children}</div>}
+      {lot && <div className="ph-lot" aria-hidden="true"><Lot k={lot} size={lot === 'lakes' ? 190 : 170} /></div>}
       {est && <div className="ph-killa" aria-hidden="true"><Killa estado={est} size={250} /></div>}
     </motion.header>
   );

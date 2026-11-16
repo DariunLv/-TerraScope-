@@ -42,7 +42,7 @@ export default function WorldMap() {
   return (
     <section id="mapa"><div className="wrap">
       <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-        <PageHead icon={IconWorldSearch} eyebrow={L('Explorar el planeta', 'Explore the planet')} title={L('¿Dónde está cambiando la Tierra?', 'Where is the Earth changing?')} sub={L('Una misma variable puede subir en una región y bajar en otra. Escanea 30 lugares con la misma prueba, mira 12 capas satelitales de la NASA y haz clic en cualquier punto para investigarlo.', 'The same variable can rise in one region and fall in another. Scan 30 places with the same test, view 12 NASA satellite layers and click any point to investigate it.')} />
+        <PageHead lot="globe" icon={IconWorldSearch} eyebrow={L('Explorar el planeta', 'Explore the planet')} title={L('¿Dónde está cambiando la Tierra?', 'Where is the Earth changing?')} sub={L('Una misma variable puede subir en una región y bajar en otra. Escanea 30 lugares con la misma prueba, mira 12 capas satelitales de la NASA y haz clic en cualquier punto para investigarlo.', 'The same variable can rise in one region and fall in another. Scan 30 places with the same test, view 12 NASA satellite layers and click any point to investigate it.')} />
       </motion.div>
       <div className="card mapbar">
         <Select w={260} data={KEYS.map((x) => ({ value: x, label: V[x][lang][0] }))} value={k} onChange={setK} allowDeselect={false} label={L('Variable a escanear', 'Variable to scan')} />

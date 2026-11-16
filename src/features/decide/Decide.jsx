@@ -170,7 +170,7 @@ export default function Decide() {
   const AUD = [['auth', IconBuildingBank, L('Autoridad', 'Authority')], ['farm', IconPlant2, L('Agricultura y comunidad', 'Farming and community')], ['sci', IconFlask, L('Investigación', 'Research')]];
   return (
     <section id="decidir" className="page"><div className="wrap">
-      <PageHead icon={IconShieldCheck} eyebrow={L('Centro de decisiones', 'Decision center')} title={L('Qué pasa, qué podría pasar y qué hacer', 'What is happening, what could happen and what to do')} sub={L('Elige un lago o un lugar. La app lee los datos de la NASA, te da un semáforo, compara tres futuros posibles y te dice qué hacer y qué tan seguro es.', 'Choose a lake or a place. The app reads NASA data, gives you a traffic light, compares three possible futures and tells you what to do and how sure it is.')}>
+      <PageHead lot="thermo" icon={IconShieldCheck} eyebrow={L('Centro de decisiones', 'Decision center')} title={L('Qué pasa, qué podría pasar y qué hacer', 'What is happening, what could happen and what to do')} sub={L('Elige un lago o un lugar. La app lee los datos de la NASA, te da un semáforo, compara tres futuros posibles y te dice qué hacer y qué tan seguro es.', 'Choose a lake or a place. The app reads NASA data, gives you a traffic light, compares three possible futures and tells you what to do and how sure it is.')}>
         <div className="ph-pick"><span>{L('Analizar', 'Analyse')}</span><Select value={sel} onChange={(v) => v && setSel(v)} data={opts} searchable size="lg" radius="xl" allowDeselect={false} maxDropdownHeight={300} aria-label={L('Lugar a analizar', 'Place to analyse')} /></div>
       </PageHead>
 

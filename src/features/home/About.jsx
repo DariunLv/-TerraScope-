@@ -7,6 +7,7 @@ import { PiRobotBold } from 'react-icons/pi';
 import TrueFocus from '../../components/reactbits/TrueFocus/TrueFocus';
 import Killa from '../../killa/Killa';
 import Ghost from '../../ui/Ghost';
+import Lot from '../../ui/Lot';
 import { useStore } from '../../core/store';
 import { useT } from '../../core/i18n';
 import useFx from '../../ui/useFx';
@@ -18,14 +19,14 @@ export default function About() {
     [LuBot, L('3. Killa, la IA, te lo explica', '3. Killa, the AI, explains it'), L('Un semáforo, tres futuros posibles y una explicación en palabras simples.', 'A traffic light, three possible futures and a plain-language explanation.')],
   ];
   const feats = [
-    [LuTrafficCone, L('Semáforo de riesgo', 'Risk traffic light'), L('Verde, ámbar o rojo con la razón y qué hacer.', 'Green, amber or red with the reason and what to do.'), 'decidir', 'shield'],
-    [LuChartLine, L('Tres futuros', 'Three futures'), L('Qué pasa si hay sequía, si todo sigue igual o si llueve más.', 'What happens with drought, business as usual or more rain.'), 'decidir', 'trend'],
-    [LuTelescope, L('Laboratorio del detective', 'Detective lab'), L('Prueba si un cambio es real o solo ruido, paso a paso.', 'Test whether a change is real or just noise, step by step.'), 'lab', 'flask'],
-    [LuWaves, L('39 lagos del Perú', '39 Peruvian lakes'), L('Inventario, comparación y ranking de los que se salen de lo normal.', 'Inventory, comparison and ranking of the ones off normal.'), 'lagos', 'calm'],
-    [LuGlobe, L('Planeta 3D interactivo', 'Interactive 3D planet'), L('Gira la Tierra, enciende capas de la NASA y vuela a cualquier país.', 'Spin Earth, switch on NASA layers and fly to any country.'), 'explorar', 'globe'],
-    [LuBell, L('Centinela', 'Sentinel'), L('Vigila todos los lagos y avisa cuando algo cambia.', 'Watches every lake and warns you when something changes.'), 'decidir', 'alert'],
-    [LuFingerprint, L('Pasaporte de evidencia', 'Evidence passport'), L('Un informe verificable que puedes compartir.', 'A verifiable report you can share.'), 'decidir', 'fingerprint'],
-    [LuBookOpen, L('Aprender jugando', 'Learn by playing'), L('Seis lecciones para entender tendencias sin ser científico.', 'Six lessons to understand trends without being a scientist.'), 'aprender', 'book'],
+    [LuTrafficCone, L('Semáforo de riesgo', 'Risk traffic light'), L('Verde, ámbar o rojo con la razón y qué hacer.', 'Green, amber or red with the reason and what to do.'), 'decidir', 'shield', 3, 'lights'],
+    [LuWaves, L('39 lagos del Perú', '39 Peruvian lakes'), L('Inventario, comparación y ranking de los que se salen de lo normal.', 'Inventory, comparison and ranking of the ones off normal.'), 'lagos', 'calm', 3, 'lakes'],
+    [LuChartLine, L('Tres futuros', 'Three futures'), L('Qué pasa si hay sequía, si todo sigue igual o si llueve más.', 'What happens with drought, business as usual or more rain.'), 'decidir', 'trend', 2, 'thermo'],
+    [LuTelescope, L('Laboratorio del detective', 'Detective lab'), L('Prueba si un cambio es real o solo ruido, paso a paso.', 'Test whether a change is real or just noise, step by step.'), 'lab', 'flask', 2, 'lupa'],
+    [LuGlobe, L('Planeta 3D interactivo', 'Interactive 3D planet'), L('Gira la Tierra, enciende capas de la NASA y vuela a cualquier país.', 'Spin Earth, switch on NASA layers and fly to any country.'), 'explorar', 'globe', 2, 'globo'],
+    [LuBell, L('Centinela', 'Sentinel'), L('Vigila todos los lagos y avisa cuando algo cambia.', 'Watches every lake and warns you when something changes.'), 'decidir', 'alert', 2, 'alerta'],
+    [LuFingerprint, L('Pasaporte de evidencia', 'Evidence passport'), L('Un informe verificable que puedes compartir.', 'A verifiable report you can share.'), 'decidir', 'fingerprint', 2],
+    [LuBookOpen, L('Aprender jugando', 'Learn by playing'), L('Seis lecciones para entender tendencias sin ser científico.', 'Six lessons to understand trends without being a scientist.'), 'aprender', 'book', 2, 'learn'],
   ];
   return (
     <section className="about wrap">
@@ -36,16 +37,30 @@ export default function About() {
       </motion.div>
       <div className="about-steps">
         {steps.map(([I, a, b], i) => (
-          <motion.div key={a} className="about-step" initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.12 }}>
-            <span className="about-ico"><I size={26} /></span><b>{a}</b><span>{b}</span>
+          <motion.div key={a} className={'about-step st' + i} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.12 }}>
+            <i className="step-n">0{i + 1}</i>
+            <div className="step-vis">
+              {i === 0 && <><span className="ripple"><i /><i /><i /></span><Killa estado="ubicacion" size={118} live={false} shadow={false} /></>}
+              {i === 1 && <Lot k="globe" size={170} />}
+              {i === 2 && <><Killa estado="explicando" size={128} /><span className="lights"><i className="g" /><i className="a" /><i className="r" /></span></>}
+            </div>
+            <span className="about-ico"><I size={24} /></span><b>{a}</b><span>{b}</span>
+            {i < 2 && <IconArrowRight className="step-arrow" size={26} />}
           </motion.div>
         ))}
       </div>
-      <div className="about-grid">
-        {feats.map(([I, a, b, v, g], i) => (
-          <motion.button key={a} className="about-feat" onClick={() => setView(v)} initial={{ opacity: 0, y: 26, scale: 0.97 }} whileInView={{ opacity: 1, y: 0, scale: 1 }} whileHover={{ y: -5 }} viewport={{ once: true }} transition={{ delay: (i % 4) * 0.07 }}>
-            <Ghost k={g} i={i} size={120} />
-            <span className="about-ico sm"><I size={22} /></span><b>{a}</b><span>{b}</span>
+      <div className="about-bento">
+        {feats.map(([I, a, b, v, g, span, vis], i) => (
+          <motion.button key={a} className={'about-feat bf' + i + (span === 3 ? ' big' : '')} onClick={() => setView(v)} initial={{ opacity: 0, y: 26, scale: 0.97 }} whileInView={{ opacity: 1, y: 0, scale: 1 }} whileHover={{ y: -6 }} viewport={{ once: true }} transition={{ delay: (i % 3) * 0.08 }}>
+            <Ghost k={g} i={i} size={span === 3 ? 170 : 120} />
+            <span className="about-ico sm"><I size={22} /></span><b>{a}</b><span className="bf-d">{b}</span>
+            {vis === 'lights' && <span className="lights big"><i className="g" /><i className="a" /><i className="r" /></span>}
+            {vis === 'lakes' && <Lot k="lakes" size={210} className="bf-lot" />}
+            {vis === 'thermo' && <Lot k="thermo" size={92} className="bf-lot sm" />}
+            {vis === 'lupa' && <span className="bf-killa"><Killa estado="lupa" size={92} live={false} shadow={false} tap={false} /></span>}
+            {vis === 'globo' && <span className="bf-killa"><Killa estado="globo" size={92} live={false} shadow={false} tap={false} /></span>}
+            {vis === 'learn' && <span className="bf-killa"><Killa estado="ensenando" size={92} live={false} shadow={false} tap={false} /></span>}
+            {vis === 'alerta' && <span className="bf-killa"><Killa estado="alerta" size={92} live={false} shadow={false} tap={false} /></span>}
           </motion.button>
         ))}
       </div>

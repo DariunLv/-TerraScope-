@@ -2,9 +2,9 @@ import { useStore } from './store';
 import X from './i18n2';
 const D = {
   es: {
-    brand: 'Detectives de Tendencias', team: 'The Innovators · NASA Space Apps 2026 · Puno · Sede Moquegua',
+    brand: 'Detectives de Tendencias', team: 'The Innovators · Puno, Perú',
     nav: ['Planeta', 'Mapa', 'Casos', 'Laboratorio', 'Aprende', 'Datos', 'Brechas'],
-    heroKicker: 'Desafío NASA · Be an Earth System Trend Detective',
+    heroKicker: 'Sé un detective de tendencias del sistema Tierra',
     heroTitle: '¿Está cambiando el clima de tu lugar? Averígualo como un detective.',
     heroSub: 'Elige un punto del planeta, trae datos reales de la NASA y descubre si hay una tendencia… o solo ruido. Con pruebas estadísticas explicadas en palabras simples.',
     ctaA: 'Explorar el planeta', ctaB: 'Ir al laboratorio',
@@ -39,13 +39,13 @@ const D = {
       ['Intervalo de confianza', 'Un rango razonable para la pendiente. Si cruza el cero, no podemos asegurar que suba o baje.']],
     gapsTitle: 'Brechas y necesidades que el programa resuelve', gapsSub: 'Revisión de literatura científica relacionada. Cada brecha se conecta con una función del programa.',
     scales: ['Local · Puno', 'Nacional · Perú', 'Mundial', 'Lagos y lagunas', 'Frontera científica'],
-    refs: 'Referencias principales', footer: 'Hecho por The Innovators para NASA Space Apps Challenge 2026 · Datos: NASA POWER (MERRA-2/CERES) · Imágenes: NASA GIBS / Blue Marble.',
+    refs: 'Referencias principales', footer: 'TerraScope · Datos: NASA POWER (MERRA-2/CERES) · Imágenes: NASA GIBS / Blue Marble.',
     disclaimer: 'POWER es un modelo de reanálisis a ~50 km: sirve para detectar tendencias, no reemplaza estaciones locales, sobre todo en montañas.',
   },
   en: {
-    brand: 'Trend Detectives', team: 'The Innovators · NASA Space Apps 2026 · Puno · Sede Moquegua',
+    brand: 'Trend Detectives', team: 'The Innovators · Puno, Peru',
     nav: ['Planet', 'Map', 'Cases', 'Lab', 'Learn', 'Data', 'Gaps'],
-    heroKicker: 'NASA Challenge · Be an Earth System Trend Detective',
+    heroKicker: 'Be an Earth System Trend Detective',
     heroTitle: 'Is the climate where you live changing? Find out like a detective.',
     heroSub: 'Pick a point on the planet, pull real NASA data, and discover whether there is a trend… or just noise. Statistical tests explained in plain words.',
     ctaA: 'Explore the planet', ctaB: 'Go to the lab',
@@ -80,7 +80,7 @@ const D = {
       ['Confidence interval', 'A reasonable range for the slope. If it crosses zero we cannot say it rises or falls.']],
     gapsTitle: 'Gaps and needs the program solves', gapsSub: 'Review of related scientific literature. Each gap maps to a feature of the program.',
     scales: ['Local · Puno', 'National · Peru', 'Global', 'Lakes', 'Science frontier'],
-    refs: 'Main references', footer: 'Made by The Innovators for NASA Space Apps Challenge 2026 · Data: NASA POWER (MERRA-2/CERES) · Imagery: NASA GIBS / Blue Marble.',
+    refs: 'Main references', footer: 'TerraScope · Data: NASA POWER (MERRA-2/CERES) · Imagery: NASA GIBS / Blue Marble.',
     disclaimer: 'POWER is a ~50 km reanalysis: good for detecting trends, not a replacement for local stations, especially in mountains.',
   },
 };

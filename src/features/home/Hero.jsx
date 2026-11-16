@@ -1,4 +1,3 @@
-import saLogo from '../../assets/spaceapps.png';
 import Drip from '../../ui/Drip';
 import Ghost from '../../ui/Ghost';
 import About from './About';
@@ -19,7 +18,8 @@ import CountUp from '../../ui/CountUp';
 import SpotlightCard from '../../ui/SpotlightCard';
 import ScrollVelocity from '../../ui/ScrollVelocity';
 import Earth from '../../shared/earth/Earth';
-import { KillaSay } from '../../killa/Killa';
+import Killa, { KillaSay } from '../../killa/Killa';
+import Lot from '../../ui/Lot';
 import { TourLink } from '../../layout/Tour';
 import { PLACES } from '../../lib/nasa/data';
 import { useStore } from '../../core/store';
@@ -42,7 +42,6 @@ export default function Hero() {
       <div className="hero-space"><div className="hero-stars" /><div id="planeta" className="hero-r"><Earth mode="hero" /><div className="hero-killa"><KillaSay estado="bienvenida" size={150} text={L('¡Hola! Soy Killa. Te ayudo a saber si el agua de un lugar está bien.', 'Hi! I am Killa. I help you check whether a place’s water is okay.')} /></div></div>
       <div className="wrap" style={{ position: 'relative' }}>
         <div className="hero-grid"><div className="hero-l">
-          <div className="hero-top"><img className="sa-logo" src={saLogo} alt="NASA Space Apps Challenge" /></div>
           <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}><span className="pill glass"><ShinyText text={t.kicker2} color="#9be7cf" shineColor="#ffffff" speed={3} /></span></motion.div>
           <h1 key={lang} className="display techh" aria-label={t.line1 + ' ' + t.line2} style={{ textTransform: 'uppercase' }}>
             {rows.map((r, i) => <div key={i} className="tt" aria-hidden="true">{step > i && <TechText text={r} fontFamily="Plus Jakarta Sans Variable, Inter Variable, sans-serif" fontWeight={800} fontSize={120} letterSpacing={-0.02} color={i === rows.length - 1 ? '#5eead4' : '#ffffff'} accentColor={i === rows.length - 1 ? '#ffffff' : '#5eead4'} align="left" reach={120} labels={false} guides={false} sweep={false} intro="type" introDuration={2.6} specks={6} speed={0.6} clickKick={false} />}</div>)}
@@ -70,17 +69,32 @@ export default function Hero() {
           ))}
         </div>
       </div>
-      <div className="band deep">
-        {fxOn && <Suspense fallback={null}><div className="band-gl"><GhostFibers glowColor="#34d399" lineColor="#a7f3d0" secondaryColor="#7dd3fc" speed={0.4} threads={60} fiberStyle="dots" mouseInteraction={false} pulseOnClick={false} grain={0.02} dpr={1} /></div></Suspense>}
+      <div className="band deep dd">
+        <div className="dd-mesh" aria-hidden="true"><i /><i /><i /><u /></div>
+        {fxOn && <Suspense fallback={null}><div className="band-gl"><GhostFibers glowColor="#5eead4" lineColor="#bbf7d0" secondaryColor="#93c5fd" speed={0.35} threads={34} fiberStyle="lines" mouseInteraction={false} pulseOnClick={false} grain={0} dpr={1} /></div></Suspense>}
         <div className="wrap">
-          <div className="band-head"><span className="ph-eyebrow light"><IconShieldCheck size={16} />{L('Del dato a la decisión', 'From data to decision')}</span>
-            <h2 className="band-title">{L('No solo mostramos datos: te decimos qué hacer', 'We do not just show data: we tell you what to do')}</h2>
-            <p className="band-sub">{L('Para cada lago o lugar la app calcula un semáforo, compara qué pasaría si ocurre algo peligroso, si no ocurre nada o si todo está tranquilo, y responde tus preguntas.', 'For each lake or place the app computes a traffic light, compares what would happen if something dangerous happens, nothing happens or all stays calm, and answers your questions.')}</p></div>
-          <div className="trio">
-            {[[IconFlame, L('Sequía y calor', 'Drought and heat'), L('Si ocurre algo peligroso: cuánta agua faltaría y qué hacer antes.', 'Severe drought and heat: how much water would be short and what to do first.'), '#fca5a5'], [IconEqual, L('Clima reciente', 'Recent climate'), L('Si no ocurre nada nuevo: ¿alcanza el agua o ya hay una tendencia?', 'Recent climate repeats: is there enough water or is there already a trend?'), '#bfdbfe'], [IconSunHigh, L('Año húmedo', 'Wet year'), L('Si todo está tranquilo: cuánto se recupera y cómo aprovecharlo.', 'A wet year: how much recovers and how to use it.'), '#86efac']].map(([I, a, b, c], i) => (
-              <motion.div key={a} className="trio-c" style={{ '--c': c }} initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}><Ghost k={['fire', 'calm', 'sun'][i]} i={i} size={150} /><span><I size={26} /></span><h3>{a}</h3><p>{b}</p></motion.div>))}
+          <div className="dd-top">
+            <div className="band-head"><span className="ph-eyebrow light"><IconShieldCheck size={16} />{L('Del dato a la decisión', 'From data to decision')}</span>
+              <h2 className="band-title">{L('No solo mostramos datos: te decimos qué hacer', 'We do not just show data: we tell you what to do')}</h2>
+              <p className="band-sub">{L('Para cada lago o lugar la app calcula un semáforo, compara qué pasaría si ocurre algo peligroso, si no ocurre nada o si todo está tranquilo, y responde tus preguntas.', 'For each lake or place the app computes a traffic light, compares what would happen if something dangerous happens, nothing happens or all stays calm, and answers your questions.')}</p>
+              <Button size="xl" radius="xl" className="cta-light" rightSection={<IconArrowRight size={22} />} onClick={() => { setLake('titicaca'); setView('decidir'); }}>{L('Probar con el lago Titicaca', 'Try it with Lake Titicaca')}</Button>
+            </div>
+            <div className="dd-killa">
+              <motion.span className="dd-chip c1" animate={{ y: [0, -8, 0] }} transition={{ duration: 4, repeat: Infinity }}><i className="g" />{L('Tranquilo', 'Calm')}</motion.span>
+              <motion.span className="dd-chip c2" animate={{ y: [0, 8, 0] }} transition={{ duration: 4.6, repeat: Infinity }}><i className="a" />{L('Vigilar', 'Watch')}</motion.span>
+              <motion.span className="dd-chip c3" animate={{ y: [0, -6, 0] }} transition={{ duration: 5.2, repeat: Infinity }}><i className="r" />{L('Alerta', 'Alert')}</motion.span>
+              <span className="dd-halo" /><Killa estado="decidida" size={330} />
+            </div>
           </div>
-          <Button size="xl" radius="xl" className="cta-light" rightSection={<IconArrowRight size={22} />} onClick={() => { setLake('titicaca'); setView('decidir'); }}>{L('Probar con el lago Titicaca', 'Try it with Lake Titicaca')}</Button>
+          <div className="trio">
+            {[[IconFlame, L('Sequía y calor', 'Drought and heat'), L('Si ocurre algo peligroso: cuánta agua faltaría y qué hacer antes.', 'Severe drought and heat: how much water would be short and what to do first.'), '#fca5a5', 78, 'thermo'], [IconEqual, L('Clima reciente', 'Recent climate'), L('Si no ocurre nada nuevo: ¿alcanza el agua o ya hay una tendencia?', 'Recent climate repeats: is there enough water or is there already a trend?'), '#bfdbfe', 46, 'lakes'], [IconSunHigh, L('Año húmedo', 'Wet year'), L('Si todo está tranquilo: cuánto se recupera y cómo aprovecharlo.', 'A wet year: how much recovers and how to use it.'), '#86efac', 18, 'globe']].map(([I, a, b, c, r, lt], i) => (
+              <motion.div key={a} className="trio-c" style={{ '--c': c }} initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
+                <Ghost k={['fire', 'calm', 'sun'][i]} i={i} size={150} />
+                <div className="trio-h"><span><I size={26} /></span>{i === 0 && <Lot k="thermo" size={74} className="trio-lot" />}</div>
+                <h3>{a}</h3><p>{b}</p>
+                <div className="trio-gauge"><small>{L('Riesgo de agua', 'Water risk')}</small><div><motion.i style={{ background: c }} initial={{ width: 0 }} whileInView={{ width: r + '%' }} viewport={{ once: true }} transition={{ duration: 1.4, delay: 0.3 + i * 0.15 }} /></div><b>{r}%</b></div>
+              </motion.div>))}
+          </div>
         </div>
       </div>
       <div className="wrap">

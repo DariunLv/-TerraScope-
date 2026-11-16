@@ -1,6 +1,6 @@
 export default {
   es: {
-    kicker2: 'Desafío NASA Space Apps 2026 · Sede Moquegua',
+    kicker2: 'Datos satelitales de la NASA · Moquegua, Perú',
     line1: 'Detecta cómo cambia la Tierra,', line2: 'en tu propio lugar.',
     sub2: 'Elige un punto del planeta, trae datos reales de la NASA y descubre si hay una tendencia… o solo ruido. Tres pruebas estadísticas, explicadas como si fueras detective.',
     stripesCap: 'Franjas de calentamiento de ejemplo (datos simulados): cada franja es un año.',
@@ -42,7 +42,7 @@ export default {
     pickHint: 'Elige al menos una variable.',
   },
   en: {
-    kicker2: 'NASA Space Apps Challenge 2026 · Moquegua',
+    kicker2: 'NASA satellite data · Moquegua, Peru',
     line1: 'Detect how Earth is changing,', line2: 'right where you live.',
     sub2: 'Pick a point on the planet, pull real NASA data and discover whether there is a trend… or just noise. Three statistical tests, explained like a detective story.',
     stripesCap: 'Example warming stripes (simulated data): each stripe is one year.',

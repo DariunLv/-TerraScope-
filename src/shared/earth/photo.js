@@ -12,7 +12,7 @@ export function takePhoto(viewer, { title, lines = [], credit = '', file = 'terr
   g.font = `600 ${Math.round(17 * k)}px Inter, system-ui, sans-serif`; g.fillStyle = '#dbe7f5';
   lines.forEach((t) => { g.fillText(t, 22 * k, y); y += Math.round(26 * k); });
   g.font = `500 ${Math.round(13 * k)}px Inter, system-ui, sans-serif`; g.fillStyle = '#9fb3cf'; g.textBaseline = 'bottom';
-  g.fillText(credit + ' · TerraScope · NASA Space Apps 2026', 22 * k, h + bar - Math.round(10 * k));
+  g.fillText(credit + ' · TerraScope', 22 * k, h + bar - Math.round(10 * k));
   const a = document.createElement('a'); a.href = out.toDataURL('image/png'); a.download = `${file}-${new Date().toISOString().slice(0, 10)}.png`; document.body.appendChild(a); a.click(); a.remove();
   return true;
 }

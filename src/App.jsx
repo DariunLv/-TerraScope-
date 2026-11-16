@@ -11,7 +11,6 @@ import Hero from './features/home/Hero';
 import MapModal from './layout/MapModal';
 import ClickSpark from './ui/ClickSpark';
 import useFx from './ui/useFx';
-import saLogo from './assets/spaceapps.png';
 const TargetCursor = lazy(() => import('./components/reactbits/TargetCursor/TargetCursor'));
 import { useEffect } from 'react';
 import { useStore } from './core/store';
@@ -70,7 +69,7 @@ export default function App() {
               </motion.div>
             </AnimatePresence>
           </main>
-          <footer><img className="fsa" src={saLogo} alt="NASA Space Apps Challenge" /><div className="fkilla"><Killa estado="bienvenida" size={84} /></div><p>{t.footer}</p><p>{t.team}</p></footer>
+          <footer><div className="fkilla"><Killa estado="bienvenida" size={84} /></div><p>{t.footer}</p><p>{t.team}</p></footer>
         </div>
       </div>
       <TabBar />
