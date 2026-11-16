@@ -5,10 +5,11 @@ import { MantineProvider } from '@mantine/core';
 import { useStore } from '../core/store';
 import MapModal from '../layout/MapModal';
 const mocks = vi.hoisted(()=>({ maps:[] }));
-vi.mock('maplibre-gl',()=>({default:{
+vi.mock('maplibre-gl',()=>({
+  setWorkerUrl:vi.fn(),
   Map:class { constructor(options){this.options=options;this.handlers={};this.setLayoutProperty=vi.fn();this.remove=vi.fn();mocks.maps.push(this);} addControl(){} on(){} once(name,callback){this.handlers[name]=callback;} getLayer(){return true;} isStyleLoaded(){return false;} },
   Marker:class {setLngLat(){return this;}addTo(){return this;}},NavigationControl:class{}
-}}));
+}));
 it('applies the selected layer after asynchronous initialization and reopening, and restores focus',async()=>{
   const user=userEvent.setup(); useStore.setState({lang:'es',mapOpen:true,place:{id:'moq',lat:-17.19,lon:-70.93}});
   const opener=document.createElement('button');opener.textContent='Abrir mapa';document.body.appendChild(opener);opener.focus();

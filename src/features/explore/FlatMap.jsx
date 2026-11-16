@@ -5,6 +5,7 @@ import { IconCompass, IconRotate3d, IconPlane, IconFlask } from '@tabler/icons-r
 import { feature } from 'topojson-client';
 import world from '../../lib/geo/world110.json';
 import { useT } from '../../core/i18n';
+import { loadMapLibre } from '../../shared/maps/loadMapLibre';
 const G = 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/';
 const day = (n) => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
 const LAYERS = (d = day(6)) => ({
@@ -24,7 +25,7 @@ export default function FlatMap({ dots, res, place, setPlace, k, vlabel, onInves
   useEffect(() => {
     let dead = false, m, resize;
     (async () => {
-      const lib = (await import('maplibre-gl')).default; await import('maplibre-gl/dist/maplibre-gl.css'); if (dead || !el.current) return; ml.current = lib;
+      const lib = await loadMapLibre(); if (dead || !el.current) return; ml.current = lib;
       const ls = LAYERS();
       m = new lib.Map({ container: el.current, center: [place.lon, place.lat], zoom: 2.4, minZoom: 1, maxZoom: 9, attributionControl: { compact: true }, renderWorldCopies: true,
         style: { version: 8, sources: { ...Object.fromEntries(Object.entries(ls).map(([id, [u, mz]]) => [id, { type: 'raster', tiles: [u], tileSize: 256, maxzoom: mz, attribution: 'NASA GIBS / EOSDIS' }])), land: { type: 'geojson', data: LAND }, pts: { type: 'geojson', data: { type: 'FeatureCollection', features: [] } } },
@@ -45,7 +46,7 @@ export default function FlatMap({ dots, res, place, setPlace, k, vlabel, onInves
       const dot = document.createElement('div'); dot.className = 'fm-you'; mark.current = new lib.Marker({ element: dot }).setLngLat([place.lon, place.lat]).addTo(m);
       m.once('style.load', () => { if (!dead) { map.current = m; setReady(true); m.resize(); } });
       try { resize = new ResizeObserver(() => { if (!dead) m.resize(); }); resize.observe(el.current); } catch { /* sin observer */ }
-    })().catch((e) => { window.__fmerr = [String(e?.message || e).slice(0, 300)]; setFail(true); });
+    })().catch((e) => { if (dead) return; window.__fmerr = [String(e?.message || e).slice(0, 300)]; setFail(true); });
     return () => { dead = true; resize?.disconnect(); try { m?.remove(); } catch { /* ya cerrado */ } map.current = null; };
   }, []); // eslint-disable-line
   useEffect(() => { const m = map.current; if (!ready || !m) return; ['bm', 'tc', 'nl', 'lst', 'gpm'].forEach((id) => m.setLayoutProperty(id, 'visibility', id === layer || id === 'bm' && layer !== 'tc' && layer !== 'nl' ? 'visible' : 'none')); }, [layer, ready]);
@@ -62,7 +63,7 @@ export default function FlatMap({ dots, res, place, setPlace, k, vlabel, onInves
       <div className="fm-bar">
         <SegmentedControl size="xs" color="navy" value={layer} onChange={setLayer} data={[{ value: 'bm', label: L('Relieve', 'Relief') }, { value: 'tc', label: L('Color real', 'True color') }, { value: 'nl', label: L('Luces nocturnas', 'Night lights') }, { value: 'lst', label: L('Temperatura', 'Temperature') }, { value: 'gpm', label: L('Lluvia', 'Rain') }]} />
         <Button size="compact-sm" variant={tilt ? 'filled' : 'default'} color="navy" leftSection={<IconRotate3d size={15} />} onClick={toggleTilt}>{L('Inclinar 3D', '3D tilt')}</Button>
-        <Button size="compact-sm" variant="default" leftSection={<IconCompass size={15} />} onClick={() => map.current?.easeTo({ bearing: 0, pitch: 0, duration: 600 })}>{L('Norte', 'North')}</Button>
+        <Button size="compact-sm" variant="default" leftSection={<IconCompass size={15} />} onClick={() => { setTilt(false); map.current?.easeTo({ bearing: 0, pitch: 0, duration: 600 }); }}>{L('Norte', 'North')}</Button>
       </div>
       <div className="fm-fly"><span><IconPlane size={14} /> {L('Volar a', 'Fly to')}</span>{FLY.map(([n, lo, la, z]) => <button key={n} onClick={() => fly([lo, la], z)}>{n}</button>)}</div>
     </div>

@@ -4,6 +4,7 @@ import { IconX, IconFlask } from '@tabler/icons-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../core/store';
 import { useT } from '../core/i18n';
+import { loadMapLibre } from '../shared/maps/loadMapLibre';
 import { feature } from 'topojson-client';
 import world from '../lib/geo/world110.json';
 const LAND = feature(world, world.objects.countries);
@@ -51,7 +52,7 @@ export default function MapModal() {
     let dead = false;
     (async () => {
       try {
-        const ml = (await import('maplibre-gl')).default; await import('maplibre-gl/dist/maplibre-gl.css');
+        const ml = await loadMapLibre();
         if (dead || !el.current) return; lib.current = ml;
         const L = layers();
         const m = new ml.Map({
