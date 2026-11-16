@@ -3,6 +3,7 @@ import { caseLink, seriesCsv, caseReportHtml } from './report';
 /* Centro de decisiones: de los datos a qué hacer.
    Semáforo + tres futuros posibles + alertas con su evidencia + asistente de consulta + confianza,
    lenguaje de la Tierra (EEL), descubrimientos automáticos y pasaporte de evidencia. Todo local. */
+import SplitFlapText from '../../components/reactbits/SplitFlapText/SplitFlapText';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Select, Tabs, Progress, Button, Skeleton, Alert, TextInput, SegmentedControl } from '@mantine/core';
 import { IconShieldCheck, IconCircleCheck, IconEye, IconAlertTriangle, IconSend, IconMessageChatbot, IconDownload, IconTelescope, IconArrowRight, IconSparkles, IconWorld, IconEyeOff, IconMountain, IconFingerprint, IconBuildingBank, IconPlant2, IconFlask, IconRadar2, IconCopy, IconCheck, IconSettings } from '@tabler/icons-react';
@@ -108,6 +109,18 @@ export default function Decide() {
   const report = () => { if (!A || !pass || !ann) return; const html = caseReportHtml({ A, tgt, ann, pass, coh: coherence(A, tgt, clim, sweep?.rows, L), lang, L, link: caseLink(sel) }), w = window.open('', '_blank'); if (w) { w.document.write(html); w.document.close(); setTimeout(() => { try { w.focus(); w.print(); } catch { /* sin impresión */ } }, 400); } else saveBlob(html, `terrascope-${slug}-informe.html`, 'text/html;charset=utf-8'); };
   const cp = () => { navigator.clipboard?.writeText(pass.id); setCopied(true); setTimeout(() => setCopied(false), 1500); };
   const lvc = A ? LV[A.level].c : '#64748b', Ic = A ? LVI[A.level] : IconEye;
+  const sec = useStore((s) => s.sec), secN = useStore((s) => s.secN);
+  useEffect(() => { // el menú ramificado de la izquierda lleva a cada parte
+    if (!sec || !sec.startsWith('decidir:')) return undefined; const id = sec.slice(8); let n = 0;
+    const t = setInterval(() => { const el = document.getElementById(id); if (el || ++n > 30) { clearInterval(t); el?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }, 120);
+    return () => clearInterval(t);
+  }, [secN]); // eslint-disable-line
+  useEffect(() => { // y marca en qué parte estás mientras bajas
+    const ids = ['semaforo', 'asistente', 'tend', 'futuros', 'validacion', 'pasaporte'];
+    const io = new IntersectionObserver((es) => { const v = es.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0]; if (v) useStore.getState().setSec('decidir:' + v.target.id); }, { rootMargin: '-20% 0px -65% 0px' });
+    const t = setTimeout(() => ids.forEach((i) => { const e = document.getElementById(i); if (e) io.observe(e); }), 1200);
+    return () => { clearTimeout(t); io.disconnect(); };
+  }, [A ? 1 : 0]); // eslint-disable-line
   const coh = useMemo(() => (A && clim ? coherence(A, tgt, clim, sweep?.rows, L) : null), [A, clim, sweep, lang]); // eslint-disable-line
   const head = !A ? '' : A.level === 0 ? L('Balance climático dentro del rango histórico', 'Climate balance within the historical range') : A.kind === 'wet' ? L('Exceso de agua: vigila posibles desbordes', 'Excess water: watch for overflow') : A.level === 1 ? L('Hay señales de que el agua empieza a faltar', 'Signs that water is starting to run short') : L('Riesgo alto de falta de agua', 'High risk of water shortage');
   const lead = !A ? '' : A.level === 0 ? L(`En ${tgt.name} la lluvia menos la evaporación de los últimos 12 meses está dentro de lo esperable. Es un índice del clima de la zona, no el nivel medido del lago o embalse. ${A.pDry >= 0.2 ? `Aun así, la simulación da ${Math.round(A.pDry * 100)} % de que el próximo año sea de los más secos (lo normal es 10 %): conviene preparar un plan sin actuar todavía.` : 'No hace falta actuar; sí seguir midiendo.'}`, `At ${tgt.name} rain minus evaporation over the last 12 months is within what is expected. It is a climate index for the area, not the measured lake or reservoir level. ${A.pDry >= 0.2 ? `Even so, the simulation gives ${Math.round(A.pDry * 100)} % that next year is among the driest (normal is 10 %): prepare a plan without acting yet.` : 'No action needed; keep measuring.'}`) : A.alerts.find((a) => a.lv > 0)?.why;
@@ -170,7 +183,7 @@ export default function Decide() {
         <motion.div id="semaforo" className="status card" style={{ '--lv': lvc }} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} key={tgt.id + A.level}>
           <div className="st-gauge"><Gauge risk={A.risk} color={lvc} label={L('Nivel de riesgo', 'Risk level')} /><div className="gnum"><CountUp key={tgt.id} to={A.risk} duration={1.2} /><small>/100</small></div><span className="gcap">{L('Riesgo', 'Risk')}</span></div>
           <div className="st-main">
-            <span className="lvchip"><Ic size={22} />{LV[A.level][lang]}</span>
+            <span className="lvchip"><Ic size={22} /><SplitFlapText key={lang + A.level} words={[LV[A.level][lang].toUpperCase()]} loop={false} padTo={0} fontSize={16} tileColor="rgba(255,255,255,.16)" textColor="#fff" gap={2} flipsPerChar={5} tileRadius={5} /></span>
             <div className="st-two"><span className="st-pill ok">{L('Ahora', 'Now')}: {A.w.z <= -1 ? L('balance reciente bajo', 'recent balance low') : L('balance reciente dentro de lo esperado', 'recent balance as expected')}</span><span className={'st-pill ' + (A.pDry >= 0.2 ? 'warn' : 'ok')}>{L('Próximo año', 'Next year')}: {A.pDry >= 0.2 ? L('riesgo elevado según la simulación', 'elevated risk in the simulation') : L('riesgo normal según la simulación', 'normal risk in the simulation')}</span></div>
             <h2 className="st-head">{head}</h2>
             <p className="st-lead">{lead}</p>

@@ -55,7 +55,7 @@ export default function EarthView({ mode = 'hero', points, uncovered, alerts }) 
   langR.current = lang;
   const [flash, setFlash] = useState(false);
   const [evOn, setEvOn] = useState(false), [evState, setEvState] = useState(null), [ev, setEv] = useState(null);
-  const def = layerById(layerId), FAR = mode === 'explore' ? 2.25e7 : 1.15e7; // altura inicial de la cámara
+  const def = layerById(layerId), FAR = mode === 'explore' ? 2.25e7 : mode === 'hero' ? 7.2e6 : 1.15e7; // altura inicial de la cámara
 
   /* ---- crear el visor una sola vez ---- */
   useEffect(() => {
@@ -63,12 +63,12 @@ export default function EarthView({ mode = 'hero', points, uncovered, alerts }) 
     try {
       v = new C.Viewer(el.current, {
         animation: false, timeline: false, baseLayerPicker: false, geocoder: false, homeButton: false, sceneModePicker: false, navigationHelpButton: false, fullscreenButton: false, infoBox: false, selectionIndicator: false,
-        scene3DOnly: true, skyBox: false, showRenderLoopErrors: false, contextOptions: { webgl: { preserveDrawingBuffer: true } },
+        scene3DOnly: true, skyBox: false, showRenderLoopErrors: false, contextOptions: { webgl: { alpha: true, preserveDrawingBuffer: true } },
         baseLayer: C.ImageryLayer.fromProviderAsync(C.TileMapServiceImageryProvider.fromUrl(C.buildModuleUrl('Assets/Textures/NaturalEarthII'))),
       });
     } catch (e) { console.warn('Cesium', e); setDead(true); return undefined; }
     V.current = v; const sc = v.scene;
-    sc.backgroundColor = col('#e4f0fa'); sc.globe.baseColor = col('#cfe5f5'); if (sc.sun) sc.sun.show = false; if (sc.moon) sc.moon.show = false; sc.globe.enableLighting = false; sc.requestRenderMode = true; sc.fog.enabled = false; sc.globe.showGroundAtmosphere = false;
+    sc.backgroundColor = mode === 'hero' ? C.Color.TRANSPARENT : col('#e4f0fa'); sc.globe.baseColor = mode === 'hero' ? col('#0a2f5c') : col('#cfe5f5'); if (sc.sun) sc.sun.show = false; if (sc.moon) sc.moon.show = false; sc.globe.enableLighting = false; sc.requestRenderMode = true; sc.fog.enabled = false; sc.globe.showGroundAtmosphere = mode === 'hero';
     sc.screenSpaceCameraController.minimumZoomDistance = 12000; sc.screenSpaceCameraController.maximumZoomDistance = 3.6e7;
     if (window.innerWidth > 720) { v.useBrowserRecommendedResolution = false; v.resolutionScale = Math.min(window.devicePixelRatio || 1, 1.5); }
     v.cesiumWidget.screenSpaceEventHandler.removeInputAction(C.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);

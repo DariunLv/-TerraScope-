@@ -5,6 +5,9 @@ export const useStore = create((set) => ({
   lang: 'es',
   setLang: (lang) => set({ lang }),
   view: 'inicio',
+  sec: null, secN: 0,
+  goSec: (view, sec) => { set((s) => ({ view, sec: view + ':' + sec, secN: s.secN + 1 })); },
+  setSec: (sec) => set({ sec }),
   setView: (view) => { set({ view }); try { window.scrollTo({ top: 0, behavior: 'instant' }); } catch { window.scrollTo(0, 0); } },
   practice: false, // true = usar siempre datos de práctica (sin internet)
   setPractice: (practice) => set({ practice }),

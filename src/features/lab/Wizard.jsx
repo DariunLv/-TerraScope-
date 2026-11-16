@@ -46,7 +46,7 @@ export default function Wizard({ onRun, busy, defaults }) {
   const steps = [[IconMapPin, L('Lugar', 'Place'), L('¿Dónde?', 'Where?')], [IconListCheck, L('Variables', 'Variables'), L('¿Qué medir?', 'What to measure?')], [IconCalendar, L('Periodo', 'Period'), L('¿Cuándo?', 'When?')], [IconRocket, L('Revisar', 'Review'), L('Todo listo', 'All set')]];
   return (
     <form className="wizard" onSubmit={handleSubmit(submit)}>
-      <Stepper active={active} onStepClick={(i) => i <= done && go(i)} color="forest" size="sm" iconSize={36} completedIcon={<IconCheck size={18} />} allowNextStepsSelect={false}>
+      <Stepper active={active} onStepClick={(i) => i <= done && go(i)} color="forest" size="lg" iconSize={52} className="tsstep" classNames={{ stepLabel: "tsstep-l", stepDescription: "tsstep-d" }} completedIcon={<IconCheck size={18} />} allowNextStepsSelect={false}>
         {steps.map(([Ic, a, b], i) => <Stepper.Step key={i} icon={<Ic size={18} />} label={a} description={b} />)}
       </Stepper>
       <div className="wizbody">

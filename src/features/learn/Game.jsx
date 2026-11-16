@@ -1,5 +1,5 @@
 /* Aprender: ruta de lecciones interactivas, práctica, glosario y quiz. El progreso se guarda en este navegador. */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Tabs, Progress, TextInput, Button } from '@mantine/core';
 import { motion, AnimatePresence } from 'framer-motion';
 import { IconSchool, IconRoute, IconPuzzle, IconBook2, IconTrophy, IconCircleCheck, IconCircle, IconSearch, IconChevronDown, IconChartLine, IconWaveSine, IconDice5, IconRuler2, IconDroplet, IconLink, IconCheck, IconX, IconArrowRight } from '@tabler/icons-react';
@@ -68,7 +68,8 @@ function Quiz({ L, lang, best, onFinish }) {
 
 export default function Game() {
   const { t, lang } = useT(), L = (a, b) => (lang === 'es' ? a : b), setView = useStore((s) => s.setView);
-  const [pg, upd] = useProgress(), [openId, setOpen] = useState(null), [tab, setTab] = useState('ruta');
+  const [pg, upd] = useProgress(), [openId, setOpen] = useState(null), [tab, setTab] = useState('ruta'), sec = useStore((s) => s.sec), secN = useStore((s) => s.secN);
+  useEffect(() => { if (sec && sec.startsWith('aprender:')) setTab(sec.slice(9)); }, [secN]); // eslint-disable-line
   const done = pg.done || {}, nDone = LESSONS.filter((l) => done[l.id]).length, quizBest = pg.quiz || 0;
   const pts = nDone + (quizBest >= 6 ? 2 : quizBest >= 4 ? 1 : 0), lvl = pts >= 7 ? 3 : pts >= 5 ? 2 : pts >= 2 ? 1 : 0, pct = Math.round((nDone / LESSONS.length) * 100);
   const next = LESSONS.find((l) => !done[l.id]);
@@ -85,7 +86,7 @@ export default function Game() {
           <div className="lrn-cta"><Button size="sm" radius="xl" color="forest" onClick={() => { setTab('ruta'); setOpen((next || LESSONS[0]).id); }}>{nDone ? L('Continuar', 'Continue') : L('Empezar', 'Start')}</Button><Button size="sm" radius="xl" variant="default" onClick={() => setView('lab')}>{L('Investigar con datos reales', 'Investigate with real data')}</Button></div>
         </div>
       </div>
-      <Tabs value={tab} onChange={setTab} color="forest" variant="pills" radius="xl" mt="lg">
+      <Tabs value={tab} onChange={(v) => { setTab(v); useStore.getState().setSec('aprender:' + v); }} color="forest" variant="pills" radius="xl" mt="lg">
         <Tabs.List className="lrn-tabs"><Tabs.Tab value="ruta" leftSection={<IconRoute size={16} />}>{L('Ruta', 'Path')}</Tabs.Tab><Tabs.Tab value="practica" leftSection={<IconPuzzle size={16} />}>{L('Practicar', 'Practice')}</Tabs.Tab><Tabs.Tab value="glosario" leftSection={<IconBook2 size={16} />}>{L('Glosario', 'Glossary')}</Tabs.Tab><Tabs.Tab value="quiz" leftSection={<IconTrophy size={16} />}>Quiz</Tabs.Tab></Tabs.List>
         <Tabs.Panel value="ruta" pt="md">
           <div className="lessons">{LESSONS.map((ls) => <Lesson key={ls.id} ls={ls} L={L} lang={lang} open={openId === ls.id} done={!!done[ls.id]} onToggle={() => setOpen(openId === ls.id ? null : ls.id)} onDone={() => upd((p) => ({ ...p, done: { ...(p.done || {}), [ls.id]: true } }))} />)}</div>

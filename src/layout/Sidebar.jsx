@@ -1,7 +1,7 @@
 /* Menú lateral tipo dashboard (todas las vistas menos la portada). Se puede contraer; en celular se usa la barra inferior. */
 import { motion } from 'framer-motion';
 import { Tooltip } from '@mantine/core';
-import { IconSatellite, IconLayoutSidebarLeftCollapse, IconLayoutSidebarLeftExpand, IconHome } from '@tabler/icons-react';
+import { IconSatellite, IconLayoutSidebarLeftCollapse, IconLayoutSidebarLeftExpand, IconHome, IconTrafficLights, IconTimeline, IconTrendingUp, IconChecklist, IconMessageChatbot, IconCertificate, IconGauge, IconChartDots3, IconRadar2, IconArrowsLeftRight, IconRoute, IconPuzzle, IconBook2, IconTrophy } from '@tabler/icons-react';
 import { useStore } from '../core/store';
 import { useT } from '../core/i18n';
 import { VIEWS } from './TopBar';

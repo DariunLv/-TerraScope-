@@ -1,3 +1,5 @@
+import TechText from '../../components/reactbits/TechText/TechText';
+import TextLoop from '../../components/reactbits/TextLoop/TextLoop';
 import { motion } from 'framer-motion';
 import { Select, Button } from '@mantine/core';
 import { IconWorldSearch, IconFlask, IconRipple, IconSearch, IconArrowRight, IconRadar2, IconCrystalBall, IconSatellite, IconStack2, IconShieldCheck, IconMessageChatbot, IconFlame, IconEqual, IconSunHigh, IconFingerprint } from '@tabler/icons-react';
@@ -26,12 +28,13 @@ export default function Hero() {
   return (
     <section className="hero">
       <div className="hero-fx"><Particles particleCount={110} particleSpread={11} speed={0.05} particleColors={['#0f9d7a', '#3b66d1', '#9fd8c2']} particleBaseSize={90} alphaParticles lightMode glow={0.4} moveParticlesOnHover /></div>
+      <div className="hero-space"><div className="hero-stars" /><div id="planeta" className="hero-r"><Earth mode="hero" /><div className="hero-killa"><KillaSay estado="bienvenida" size={150} text={L('¡Hola! Soy Killa. Te ayudo a saber si el agua de un lugar está bien.', 'Hi! I am Killa. I help you check whether a place’s water is okay.')} /></div></div>
       <div className="wrap" style={{ position: 'relative' }}>
         <div className="hero-grid"><div className="hero-l">
-          <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}><span className="pill glass"><ShinyText text={t.kicker2} color="#0c5a43" shineColor="#34d399" speed={3} /></span></motion.div>
-          <h1 key={lang} className="display">
-            <SplitText text={t.line1} tag="span" splitType="words" delay={60} duration={0.9} textAlign="inherit" className="h1l" /><br />
-            <GradientText colors={['#0c5a43', '#1e3a8a', '#0f9d7a', '#0c5a43']} animationSpeed={7}>{t.line2}</GradientText>
+          <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}><span className="pill glass"><ShinyText text={t.kicker2} color="#9be7cf" shineColor="#ffffff" speed={3} /></span></motion.div>
+          <h1 key={lang} className="display techh" aria-label={t.line1 + ' ' + t.line2} style={{ textTransform: 'uppercase' }}>
+            <div className="tt tt1" aria-hidden="true"><TechText text={t.line1.toUpperCase()} fontFamily="Plus Jakarta Sans Variable, Inter Variable, sans-serif" fontWeight={800} fontSize={120} letterSpacing={-0.03} color="#ffffff" accentColor="#5eead4" align="left" reach={160} labels={false} guides={false} intro="none" specks={10} /></div>
+            <div className="tt tt2" aria-hidden="true"><TechText text={t.line2.toUpperCase()} fontFamily="Plus Jakarta Sans Variable, Inter Variable, sans-serif" fontWeight={800} fontSize={120} letterSpacing={-0.03} color="#5eead4" accentColor="#ffffff" align="left" reach={160} labels={false} guides={false} intro="none" specks={10} /></div>
           </h1>
           <div style={{ display: 'flex' }}><BlurText key={lang} text={t.sub2} className="sub lead" delay={25} animateBy="words" stepDuration={0.3} /></div>
           <div className="hero-btns">
@@ -42,7 +45,8 @@ export default function Hero() {
           <Select className="herosearch" size="md" radius="xl" searchable clearable={false} leftSection={<IconSearch size={18} />} placeholder={L('O busca un lugar o un lago…', 'Or search a place or a lake…')} data={opts} onChange={pick} maxDropdownHeight={280} nothingFoundMessage={L('Sin resultados', 'No results')} />
           <ul className="hero-badges" hidden><li><IconShieldCheck size={18} />{L('Semáforo y alertas', 'Traffic light and alerts')}</li><li><IconCrystalBall size={18} />{L('Tres futuros posibles', 'Three possible futures')}</li><li><IconMessageChatbot size={18} />{L('Asistente que responde', 'Assistant that answers')}</li></ul>
         </div>
-        <div id="planeta" className="hero-r"><Earth mode="hero" /><div className="hero-killa"><KillaSay estado="bienvenida" size={150} text={L('¡Hola! Soy Killa. Te ayudo a saber si el agua de un lugar está bien.', 'Hi! I am Killa. I help you check whether a place’s water is okay.')} /></div></div></div>
+        </div></div></div>
+      <div className="wrap" style={{ position: 'relative' }}>
         <div className="paths">
           {paths.map(([I, a, b, v], i) => (
             <motion.div key={v} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
@@ -76,7 +80,8 @@ export default function Hero() {
         </div>
       </div>
       <div className="band stats-band"><div className="wrap"><div className="stats big">{nums.map(([n, p, label, suf], i) => <div key={i} className="stat card"><b className="num">{p}<CountUp to={n} duration={1.6} delay={0.3 + i * 0.15} />{suf && <small>{suf}</small>}</b><span>{label}</span></div>)}</div></div></div>
-      <div className="marq"><ScrollVelocity texts={['NASA POWER · GIBS · EONET · Earthdata CMR · EPIC · SMAP · FIRMS · SWOT · OPERA · MODIS · GPM · Landsat · Sentinel-2 ·']} velocity={28} className="marqt" /></div>
+      <div className="marq marq-tl"><TextLoop text="NASA POWER ✦ GIBS ✦ EONET ✦ Earthdata ✦ SMAP ✦ FIRMS ✦ SWOT ✦ MODIS ✦ GPM ✦ Landsat ✦ Sentinel-2" shape="wave" speed={60} fontSize={26} fontWeight={800} letterSpacing={3} color="#0c5a43" ribbon={false} curviness={40} pauseOnHover /></div>
+      <div className="marq" hidden><ScrollVelocity texts={['NASA POWER · GIBS · EONET · Earthdata CMR · EPIC · SMAP · FIRMS · SWOT · OPERA · MODIS · GPM · Landsat · Sentinel-2 ·']} velocity={28} className="marqt" /></div>
     </section>
   );
 }

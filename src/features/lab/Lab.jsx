@@ -31,6 +31,8 @@ export default function Lab() {
   const [start, setStart] = useState('guia');
   const [vars, setVars] = useState(['T2M', 'PRECTOTCORR', 'GWETROOT']);
   const [years, setYears] = useState([1981, 2025]); const [ds, setDs] = useState(true);
+  const sec = useStore((s) => s.sec), secN = useStore((s) => s.secN);
+  useEffect(() => { if (sec && sec.startsWith('lab:')) setTab(sec.slice(4)); }, [secN]); // eslint-disable-line
   const [busy, setBusy] = useState(false); const [res, setRes] = useState(null); const [sel, setSel] = useState(null); const [note, setNote] = useState(''); const [tab, setTab] = useState('resumen');
   const out = useRef(null);
   const placeData = PLACES.map((p) => ({ value: p.id, label: p[lang] })).concat(place.id === 'custom' ? [{ value: 'custom', label: placeLabel(place, PLACES, lang) }] : []);
@@ -104,7 +106,7 @@ export default function Lab() {
               </div>
             )}
             <div className="card panel" style={{ marginTop: 12 }}>
-              <Tabs value={tab} onChange={setTab} color="forest" variant="pills" keepMounted={false}>
+              <Tabs value={tab} onChange={(v) => { setTab(v); useStore.getState().setSec('lab:' + v); }} color="forest" variant="pills" keepMounted={false}>
                 <Tabs.List grow>
                   <Tabs.Tab value="resumen" leftSection={<IconGauge size={16} />}>{L('Resumen', 'Summary')}</Tabs.Tab>
                   <Tabs.Tab value="avanzado" leftSection={<IconChartDots3 size={16} />}>{L('Análisis avanzado', 'Advanced analysis')}</Tabs.Tab>

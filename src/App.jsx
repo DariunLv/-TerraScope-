@@ -10,6 +10,8 @@ import TopStrip from './layout/TopStrip';
 import Hero from './features/home/Hero';
 import MapModal from './layout/MapModal';
 import ClickSpark from './ui/ClickSpark';
+import useFx from './ui/useFx';
+const TargetCursor = lazy(() => import('./components/reactbits/TargetCursor/TargetCursor'));
 import { useEffect } from 'react';
 import { useStore } from './core/store';
 import { startAgent, runCycle } from './features/decide/agent';
@@ -43,9 +45,10 @@ export default function App() {
   useEffect(() => { startAgent(); const t = setTimeout(() => { try { sessionStorage.removeItem('ts_reload'); } catch { /* */ } }, 10000); const h = () => { if (!sessionStorage.getItem('ts_reload')) { try { sessionStorage.setItem('ts_reload', '1'); } catch { /* */ } location.reload(); } }; window.addEventListener('vite:preloadError', h); return () => { clearTimeout(t); window.removeEventListener('vite:preloadError', h); }; }, []);
   const practice = useStore((s) => s.practice), lakesL = useStore((s) => s.lakes);
   useEffect(() => { const t = setTimeout(() => { if (useStore.getState().agent.last) runCycle(); }, 800); return () => clearTimeout(t); }, [practice, lakesL]);
-  const { t, lang } = useT(); const view = useStore((s) => s.view), collapsed = useStore((s) => s.collapsed); const C = V[view] || Hero, home = view === 'inicio';
+  const fx = useFx(); const { t, lang } = useT(); const view = useStore((s) => s.view), collapsed = useStore((s) => s.collapsed); const C = V[view] || Hero, home = view === 'inicio';
   return (
     <ClickSpark sparkColor="#0c5a43" sparkSize={12} sparkRadius={22} sparkCount={9}>
+      {fx && <Suspense fallback={null}><TargetCursor targetSelector=".mantine-Button-root, .mantine-Tabs-tab, .glass, .sc, .bigk, .kpi, .stat, .case, .pathcard, .trendk, .valk>div, .status, .pass, .alert, .interp-in, .vchip, .sb-item, .smartcard, .tl-card, .lk-card, .sp-kpis>div, .coh" cursorColor="#0c5a43" hideDefaultCursor={false} size={30} cornerSize={14} thickness={3} padding={8} blendMode="normal" showLabel={false} spinDuration={3} /></Suspense>}
       <Background />
       {home ? <Nav /> : null}
       <div className={home ? '' : 'shell' + (collapsed ? ' min' : '')}>
