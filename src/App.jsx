@@ -11,6 +11,7 @@ import Hero from './features/home/Hero';
 import MapModal from './layout/MapModal';
 import ClickSpark from './ui/ClickSpark';
 import useFx from './ui/useFx';
+import saLogo from './assets/spaceapps.png';
 const TargetCursor = lazy(() => import('./components/reactbits/TargetCursor/TargetCursor'));
 import { useEffect } from 'react';
 import { useStore } from './core/store';
@@ -48,7 +49,7 @@ export default function App() {
   const fx = useFx(); const { t, lang } = useT(); const view = useStore((s) => s.view), collapsed = useStore((s) => s.collapsed); const C = V[view] || Hero, home = view === 'inicio';
   return (
     <ClickSpark sparkColor="#0c5a43" sparkSize={12} sparkRadius={22} sparkCount={9}>
-      {fx && <Suspense fallback={null}><TargetCursor targetSelector=".mantine-Button-root, .mantine-Tabs-tab, .glass, .sc, .bigk, .kpi, .stat, .case, .pathcard, .trendk, .valk>div, .status, .pass, .alert, .interp-in, .vchip, .sb-item, .smartcard, .tl-card, .lk-card, .sp-kpis>div, .coh" cursorColor="#0c5a43" hideDefaultCursor={false} size={30} cornerSize={14} thickness={3} padding={8} blendMode="normal" showLabel={false} spinDuration={3} /></Suspense>}
+      {fx && <Suspense fallback={null}><TargetCursor targetSelector=".mantine-Button-root, .mantine-Tabs-tab, .mantine-Paper-root, .mantine-Card-root, .mantine-Alert-root, .mantine-Badge-root, .mantine-SegmentedControl-root, .mantine-Accordion-item, .glass, [class*=card], .sc, .bigk, .kpi, .stat, .case, .pathcard, .trendk, .valk>div, .status, .pass, .alert, .interp-in, .vchip, .sb-item, .sb-killa, .coh, .gcard, .st-pill, .subtabs button, .pill, .band-card, .f50t, .f50g" cursorColor="#0c5a43" hideDefaultCursor={false} size={30} cornerSize={14} thickness={3} padding={8} blendMode="normal" showLabel={false} spinDuration={3} /></Suspense>}
       <Background />
       {home ? <Nav /> : null}
       <div className={home ? '' : 'shell' + (collapsed ? ' min' : '')}>
@@ -62,7 +63,7 @@ export default function App() {
               </motion.div>
             </AnimatePresence>
           </main>
-          <footer><div className="fkilla"><Killa estado="bienvenida" size={84} /></div><p>{t.footer}</p><p>{t.team}</p></footer>
+          <footer><img className="fsa" src={saLogo} alt="NASA Space Apps Challenge" /><div className="fkilla"><Killa estado="bienvenida" size={84} /></div><p>{t.footer}</p><p>{t.team}</p></footer>
         </div>
       </div>
       <TabBar />

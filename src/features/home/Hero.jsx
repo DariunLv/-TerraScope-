@@ -1,5 +1,7 @@
+import saLogo from '../../assets/spaceapps.png';
 import TechText from '../../components/reactbits/TechText/TechText';
 import TextLoop from '../../components/reactbits/TextLoop/TextLoop';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Select, Button } from '@mantine/core';
 import { IconWorldSearch, IconFlask, IconRipple, IconSearch, IconArrowRight, IconRadar2, IconCrystalBall, IconSatellite, IconStack2, IconShieldCheck, IconMessageChatbot, IconFlame, IconEqual, IconSunHigh, IconFingerprint } from '@tabler/icons-react';
@@ -19,6 +21,9 @@ import { useStore } from '../../core/store';
 import { useT } from '../../core/i18n';
 export default function Hero() {
   const { t, lang } = useT(); const L = (a, b) => (lang === 'es' ? a : b);
+  const words = (t.line1 + ' ' + t.line2).toUpperCase().split(' '), cap = Math.ceil(words.join(' ').length / 3) + 1, rows = [''];
+  words.forEach((w) => { const c = rows[rows.length - 1]; if (c && (c + ' ' + w).length > cap && rows.length < 3) rows.push(w); else rows[rows.length - 1] = c ? c + ' ' + w : w; });
+  const [step, setStep] = useState(1); useEffect(() => { setStep(1); const a = setTimeout(() => setStep(2), 3600), b = setTimeout(() => setStep(3), 7200); return () => { clearTimeout(a); clearTimeout(b); }; }, [lang]);
   const { setPlace, setView, setLake, lakes: LAKES } = useStore();
   const opts = [{ group: L('Lugares del mundo', 'World places'), items: PLACES.map((p) => ({ value: 'p:' + p.id, label: p[lang] })) }, { group: L('Lagos y lagunas del Perú', 'Lakes of Peru'), items: LAKES.map((l) => ({ value: 'l:' + l.id, label: l.name })) }];
   const pick = (v) => { if (!v) return; const [k, id] = v.split(':'); if (k === 'p') { const p = PLACES.find((x) => x.id === id); setPlace({ id: p.id, lat: p.lat, lon: p.lon }); } else { const l = LAKES.find((x) => x.id === id); setLake(l.id); setPlace({ id: 'custom', lat: l.lat, lon: l.lon, name: l.name }); } };
@@ -31,10 +36,10 @@ export default function Hero() {
       <div className="hero-space"><div className="hero-stars" /><div id="planeta" className="hero-r"><Earth mode="hero" /><div className="hero-killa"><KillaSay estado="bienvenida" size={150} text={L('¡Hola! Soy Killa. Te ayudo a saber si el agua de un lugar está bien.', 'Hi! I am Killa. I help you check whether a place’s water is okay.')} /></div></div>
       <div className="wrap" style={{ position: 'relative' }}>
         <div className="hero-grid"><div className="hero-l">
+          <div className="hero-top"><img className="sa-logo" src={saLogo} alt="NASA Space Apps Challenge" /></div>
           <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}><span className="pill glass"><ShinyText text={t.kicker2} color="#9be7cf" shineColor="#ffffff" speed={3} /></span></motion.div>
           <h1 key={lang} className="display techh" aria-label={t.line1 + ' ' + t.line2} style={{ textTransform: 'uppercase' }}>
-            <div className="tt tt1" aria-hidden="true"><TechText text={t.line1.toUpperCase()} fontFamily="Plus Jakarta Sans Variable, Inter Variable, sans-serif" fontWeight={800} fontSize={120} letterSpacing={-0.03} color="#ffffff" accentColor="#5eead4" align="left" reach={160} labels={false} guides={false} intro="none" specks={10} /></div>
-            <div className="tt tt2" aria-hidden="true"><TechText text={t.line2.toUpperCase()} fontFamily="Plus Jakarta Sans Variable, Inter Variable, sans-serif" fontWeight={800} fontSize={120} letterSpacing={-0.03} color="#5eead4" accentColor="#ffffff" align="left" reach={160} labels={false} guides={false} intro="none" specks={10} /></div>
+            {rows.map((r, i) => <div key={i} className="tt" aria-hidden="true">{step > i && <TechText text={r} fontFamily="Plus Jakarta Sans Variable, Inter Variable, sans-serif" fontWeight={800} fontSize={120} letterSpacing={-0.02} color={i === rows.length - 1 ? '#5eead4' : '#ffffff'} accentColor={i === rows.length - 1 ? '#ffffff' : '#5eead4'} align="left" reach={120} labels={false} guides={false} sweep={false} intro="type" introDuration={2.6} specks={6} speed={0.6} clickKick={false} />}</div>)}
           </h1>
           <div style={{ display: 'flex' }}><BlurText key={lang} text={t.sub2} className="sub lead" delay={25} animateBy="words" stepDuration={0.3} /></div>
           <div className="hero-btns">
