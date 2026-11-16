@@ -1,6 +1,6 @@
 # React Bits in TerraScope
 
-Source: https://reactbits.dev/r/{Name}-JS-CSS.json (retrieved 2026-11-15).
+Source: https://reactbits.dev/r/{Name}-JS-CSS.json.
 The original license is preserved in `LICENSE.md`.
 
 The JS/CSS source was copied directly from the official registry, as supported by React Bits, because this project uses Mantine and plain CSS rather than a shadcn/Tailwind setup. Existing React, Motion, GSAP and Hugeicons dependencies cover the components' actual imports. TargetCursor uses the React 18-compatible `createPortal` API; React was not upgraded solely for the registry's React DOM 19 version hint.

@@ -3,26 +3,23 @@ import Ghost from '../../ui/Ghost';
 import About from './About';
 import HeroHeadline from './HeroHeadline';
 import HomeVisibility from './HomeVisibility';
-import TextLoop from '../../components/reactbits/TextLoop/TextLoop';
 import { memo, useMemo, lazy, Suspense } from 'react';
 import useFx from '../../ui/useFx';
 const GhostFibers = lazy(() => import('../../components/reactbits/GhostFibers/GhostFibers'));
 import { motion } from 'framer-motion';
 import { Select, Button } from '@mantine/core';
 import { IconWorldSearch, IconFlask, IconRipple, IconSearch, IconArrowRight, IconRadar2, IconCrystalBall, IconSatellite, IconStack2, IconShieldCheck, IconMessageChatbot, IconFlame, IconEqual, IconSunHigh, IconFingerprint } from '@tabler/icons-react';
-import Particles from '../../ui/Particles';
-import SplitText from '../../ui/SplitText';
+const Particles = lazy(() => import('../../ui/Particles'));
+const TextLoop = lazy(() => import('../../components/reactbits/TextLoop/TextLoop'));
 import BlurText from '../../ui/BlurText';
-import GradientText from '../../ui/GradientText';
 import ShinyText from '../../ui/ShinyText';
 import CountUp from '../../ui/CountUp';
 import SpotlightCard from '../../ui/SpotlightCard';
-import ScrollVelocity from '../../ui/ScrollVelocity';
 import Earth from '../../shared/earth/Earth';
 import KillaView, { KillaSay } from '../../killa/Killa';
 import Lot from '../../ui/Lot';
 import { TourLink } from '../../layout/Tour';
-import { PLACES } from '../../lib/nasa/data';
+import { PLACES } from '../../lib/nasa/catalog';
 import { useStore } from '../../core/store';
 import { useT } from '../../core/i18n';
 const Killa = memo(KillaView);
@@ -38,7 +35,7 @@ export default function Hero() {
   const smart = [[IconRadar2, L('Detecta lo que nadie busca', 'Finds what nobody is looking for'), L('Aprende lo normal de cada lugar y cada mes, y avisa cuando algo se sale.', 'Learns what is normal for each place and month, and flags departures.'), 'lab'], [IconCrystalBall, L('Proyecta con honestidad', 'Projects honestly'), L('Escenarios con su rango de incertidumbre. Si el método no es confiable, lo dice.', 'Scenarios with their uncertainty range. If the method is unreliable, it says so.'), 'lagos'], [IconSatellite, L('Une muchos satélites', 'Joins many satellites'), L('Consulta en vivo qué misiones de la NASA observaron cada lago.', 'Queries live which NASA missions observed each lake.'), 'lagos'], [IconStack2, L('La Tierra por capas', 'Earth in layers'), L('Lluvia, temperatura, nieve, incendios y más sobre un planeta 3D, día por día.', 'Rain, temperature, snow, fires and more on a 3D planet, day by day.'), 'explorar']];
   return (
     <section className="hero">
-      <HomeVisibility className="hero-fx" defer><Particles particleCount={110} particleSpread={11} speed={0.05} particleColors={PARTICLE_COLORS} particleBaseSize={90} alphaParticles lightMode glow={0.4} moveParticlesOnHover /></HomeVisibility>
+      <HomeVisibility className="hero-fx" defer><Suspense fallback={null}><Particles particleCount={110} particleSpread={11} speed={0.05} particleColors={PARTICLE_COLORS} particleBaseSize={90} alphaParticles lightMode glow={0.4} moveParticlesOnHover /></Suspense></HomeVisibility>
       <div className="hero-space"><div className="hero-stars" /><div id="planeta" className="hero-r"><Earth mode="hero" /><div className="hero-killa"><KillaSay memoAvatar estado="bienvenida" size={150} text={L('¡Hola! Soy Killa. Te ayudo a saber si el agua de un lugar está bien.', 'Hi! I am Killa. I help you check whether a place’s water is okay.')} /></div></div>
       <div className="wrap" style={{ position: 'relative' }}>
         <div className="hero-grid"><div className="hero-l">
@@ -54,6 +51,7 @@ export default function Hero() {
           <ul className="hero-badges" hidden><li><IconShieldCheck size={18} />{L('Semáforo y alertas', 'Traffic light and alerts')}</li><li><IconCrystalBall size={18} />{L('Tres futuros posibles', 'Three possible futures')}</li><li><IconMessageChatbot size={18} />{L('Asistente que responde', 'Assistant that answers')}</li></ul>
         </div>
         </div></div></div>
+      <div className="hero-melt-extension" aria-hidden="true" />
       <Drip />
       <About />
       <div className="wrap" style={{ position: 'relative' }}>
@@ -106,7 +104,7 @@ export default function Hero() {
         </div>
       </div>
       <div className="band stats-band"><div className="wrap"><div className="stats big">{nums.map(([n, p, label, suf], i) => <div key={i} className="stat card"><b className="num">{p}<CountUp to={n} duration={1.6} delay={0.3 + i * 0.15} />{suf && <small>{suf}</small>}</b><span>{label}</span></div>)}</div></div></div>
-      <div className="marq marq-tl"><TextLoop text="NASA POWER ✦ GIBS ✦ EONET ✦ Earthdata ✦ SMAP ✦ FIRMS ✦ SWOT ✦ MODIS ✦ GPM ✦ Landsat ✦ Sentinel-2" shape="wave" speed={60} fontSize={26} fontWeight={800} letterSpacing={3} color="#0c5a43" ribbon={false} curviness={40} pauseOnHover /></div>
+      <HomeVisibility className="marq marq-tl" defer><Suspense fallback={null}><TextLoop text="NASA POWER ✦ GIBS ✦ EONET ✦ Earthdata ✦ SMAP ✦ FIRMS ✦ SWOT ✦ MODIS ✦ GPM ✦ Landsat ✦ Sentinel-2" shape="wave" speed={60} fontSize={26} fontWeight={800} letterSpacing={3} color="#0c5a43" ribbon={false} curviness={40} pauseOnHover /></Suspense></HomeVisibility>
     </section>
   );
 }

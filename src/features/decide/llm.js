@@ -52,14 +52,29 @@ async function post(url, init, ms = 60000) {
   init.signal?.throwIfAborted();
   const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), ms);
   const abort = () => ctl.abort(init.signal.reason); init.signal?.addEventListener('abort', abort, { once: true });
-  try { const r = await fetch(url, { ...init, signal: ctl.signal }); if (!r.ok) { const t = await r.text().catch(() => ''); throw new Error(`HTTP ${r.status} ${t.slice(0, 120)}`); } return await r.json(); } finally { clearTimeout(to); init.signal?.removeEventListener('abort', abort); }
+  try {
+    const response = await fetch(url, { ...init, signal: ctl.signal });
+    const data = await response.json().catch(() => null);
+    if (!response.ok) { const error = new Error('AI request failed'); error.status = response.status; error.code = data?.code; throw error; }
+    if (!data) { const error = new Error('Invalid AI response'); error.code = 'AI_UNAVAILABLE'; throw error; }
+    return data;
+  } finally { clearTimeout(to); init.signal?.removeEventListener('abort', abort); }
+}
+export function llmErrorMessage(error, lang) {
+  const L = (es, en) => lang === 'es' ? es : en;
+  if (error?.code === 'AI_AUTH') return L('La conexión de Groq necesita revisar su clave en Vercel.', 'The Groq connection needs its key checked in Vercel.');
+  if (error?.code === 'AI_CONFIG' || error?.status === 501) return L('Falta configurar Groq en el servidor. Revisa GROQ_API_KEY en Vercel.', 'Groq has not been configured on the server. Check GROQ_API_KEY in Vercel.');
+  if (error?.status === 429) return L('Se alcanzó el límite de consultas. Espera un momento y vuelve a intentarlo.', 'The request limit was reached. Wait a moment and try again.');
+  if (error?.code === 'AI_UNVERIFIED') return L('La explicación no conservó correctamente las cifras del análisis y se descartó.', 'The explanation did not preserve the analysis figures correctly and was discarded.');
+  if (error?.name === 'AbortError' || error?.name === 'TimeoutError' || error?.status === 504) return L('La IA tardó demasiado en responder. Puedes volver a intentarlo.', 'The AI took too long to respond. You can try again.');
+  return L('No se pudo conectar con la IA en este momento. Vuelve a intentarlo.', 'Could not reach the AI right now. Please try again.');
 }
 async function askRaw(cfg, { question, history, ctx, calc, lang, sys: sysIn, raw, signal }) {
   const evidenceRule = ctx?.cifras_verificadas ? (lang === 'es' ? '\nCada afirmación que contenga cifras debe copiar literalmente una entrada completa de cifras_verificadas, con su variable, unidad, periodo y fuente. No añadas otras cifras ni cambies las etiquetas. Puedes explicar y recomendar sin cifras. Si el cálculo solicitado no está en esa lista, explica que se necesita consultar el cálculo local.' : '\nEvery quantitative statement must copy one complete entry from cifras_verificadas verbatim, including metric, unit, period and source. Add no other numbers and do not change labels. You may explain and recommend without numbers. If a requested calculation is absent from this list, explain that the local calculation is needed.') : '';
   const sys = (sysIn || systemPrompt(lang)) + evidenceRule, user = raw ? question : `CONTEXTO:\n${JSON.stringify(ctx)}\n${calc ? `\n${lang === 'es' ? 'CÁLCULO DEL SISTEMA (úsalo tal cual)' : 'SYSTEM CALCULATION (use as is)'}: ${calc}\n` : ''}\n${lang === 'es' ? 'PREGUNTA' : 'QUESTION'}: ${question}`;
   const hist = history.slice(-6).map((m) => ({ role: m.me ? 'user' : 'assistant', content: m.text }));
   if (cfg.mode === 'online') {
-    const j = await post('/api/chat', { signal, method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ system: sys, messages: [...hist, { role: 'user', content: user }] }) }, 45000);
+    const j = await post('/api/chat', { signal, method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ provider: 'groq', system: sys, messages: [...hist, { role: 'user', content: user }] }) }, 45000);
     if (!j?.text) throw new Error(j?.error || 'respuesta vacía'); return j.text;
   }
   if (cfg.mode === 'ollama') {
@@ -77,10 +92,10 @@ async function askRaw(cfg, { question, history, ctx, calc, lang, sys: sysIn, raw
 export async function askLLM(cfg, args) {
   const text = await askRaw(cfg, args);
   if (args.noVerify) return text;
-  if (args.ctx?.cifras_verificadas && unverifiedStatements(text, args.ctx.cifras_verificadas)) throw new Error(args.lang === 'es' ? 'La respuesta no conservó la variable, unidad o periodo de las cifras; se descartó' : 'The answer did not preserve the figures’ metric, unit or period; it was discarded');
+  if (args.ctx?.cifras_verificadas && unverifiedStatements(text, args.ctx.cifras_verificadas)) throw Object.assign(new Error(args.lang === 'es' ? 'La respuesta no conservó la variable, unidad o periodo de las cifras; se descartó' : 'The answer did not preserve the figures’ metric, unit or period; it was discarded'), { code: 'AI_UNVERIFIED' });
   const src = `${args.sys || systemPrompt(args.lang)} ${JSON.stringify(args.ctx || '')} ${args.calc || ''} ${args.question || ''}`;
   const bad = unverifiedNumbers(text, src, !!args.raw);
-  if (bad.length) throw new Error(args.lang === 'es' ? `Killa citó cifras que la app no calculó (${bad.slice(0, 4).join(', ')}); se descartó esa respuesta` : `Killa quoted figures the app did not compute (${bad.slice(0, 4).join(', ')}); that answer was discarded`);
+  if (bad.length) throw Object.assign(new Error(args.lang === 'es' ? `Killa citó cifras que la app no calculó (${bad.slice(0, 4).join(', ')}); se descartó esa respuesta` : `Killa quoted figures the app did not compute (${bad.slice(0, 4).join(', ')}); that answer was discarded`), { code: 'AI_UNVERIFIED' });
   return text;
 }
 

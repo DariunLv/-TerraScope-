@@ -1,6 +1,6 @@
 import Tour from './layout/Tour';
 import Killa from './killa/Killa';
-import { Component, lazy, Suspense } from 'react';
+import { Component, lazy, Suspense, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Loader } from '@mantine/core';
 import Background from './layout/Background';
@@ -8,13 +8,13 @@ import Nav, { TabBar } from './layout/TopBar';
 import Sidebar from './layout/Sidebar';
 import TopStrip from './layout/TopStrip';
 import Hero from './features/home/Hero';
-import MapModal from './layout/MapModal';
+const MapModal = lazy(() => import('./layout/MapModal'));
 import ClickSpark from './ui/ClickSpark';
 import useFx from './ui/useFx';
 const TargetCursor = lazy(() => import('./components/reactbits/TargetCursor/TargetCursor'));
 import { useEffect } from 'react';
 import { useStore } from './core/store';
-import { startAgent, stopAgent } from './features/decide/agent';
+import useAgentBootstrap from './core/useAgentBootstrap';
 import { useT } from './core/i18n';
 import { startNavigation } from './core/navigation';
 const WorldMap = lazy(() => import('./features/explore/WorldMap'));
@@ -43,8 +43,11 @@ class Guard extends Component {
 }
 const V = { inicio: Hero, explorar: WorldMap, lab: Lab, decidir: Decide, lagos: Lakes, aprender: Game, proyecto: Project, killa: Ask };
 export default function App() {
+  useAgentBootstrap();
+  const mapOpen = useStore(state => state.mapOpen), [mapReady, setMapReady] = useState(false);
+  useEffect(() => { if (mapOpen) setMapReady(true); }, [mapOpen]);
   useEffect(() => startNavigation(useStore), []);
-  useEffect(() => { startAgent(); const t = setTimeout(() => { try { sessionStorage.removeItem('ts_reload'); } catch { /* */ } }, 10000); const h = () => { if (!sessionStorage.getItem('ts_reload')) { try { sessionStorage.setItem('ts_reload', '1'); } catch { /* */ } location.reload(); } }; window.addEventListener('vite:preloadError', h); return () => { clearTimeout(t); stopAgent(); window.removeEventListener('vite:preloadError', h); }; }, []);
+  useEffect(() => { const t = setTimeout(() => { try { sessionStorage.removeItem('ts_reload'); } catch { /* */ } }, 10000); const h = () => { if (!sessionStorage.getItem('ts_reload')) { try { sessionStorage.setItem('ts_reload', '1'); } catch { /* */ } location.reload(); } }; window.addEventListener('vite:preloadError', h); return () => { clearTimeout(t); window.removeEventListener('vite:preloadError', h); }; }, []);
   const fx = useFx(); useEffect(() => { try { document.documentElement.lang = useStore.getState().lang; } catch { /* sin DOM */ } }, [useStore((s) => s.lang)]); const { t, lang } = useT(); const view = useStore((s) => s.view), collapsed = useStore((s) => s.collapsed); const C = V[view] || Hero, home = view === 'inicio';
   return (
     <ClickSpark sparkColor="#0c5a43" sparkSize={12} sparkRadius={22} sparkCount={9}>
@@ -66,7 +69,7 @@ export default function App() {
         </div>
       </div>
       <TabBar />
-      <MapModal />
+      {(mapOpen || mapReady) && <Suspense fallback={null}><MapModal /></Suspense>}
       <Tour />
     </ClickSpark>
   );

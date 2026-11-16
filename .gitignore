@@ -1,2 +1,24 @@
-node_modules
-dist
+# Dependencias, compilación y archivos temporales
+node_modules/
+dist/
+coverage/
+.vite/
+.tmp/
+.vercel/
+
+# Configuración privada del entorno
+.env
+.env.*
+!.env.example
+*.local
+
+# Notas internas y paquetes de actualizaciones
+/docs/
+/GUIA_PRUEBA_USUARIOS.md
+/GUION_DEMO.md
+*.zip
+
+# Registros y archivos del sistema
+*.log
+.DS_Store
+Thumbs.db

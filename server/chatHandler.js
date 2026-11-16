@@ -12,7 +12,8 @@ export function validateChatBody(body) {
     return { role: message.role, content: message.content.trim() };
   });
   if (system.length + messages.reduce((sum, message) => sum + message.content.length, 0) > 40000 || messages.at(-1).role !== 'user') throw new Error('BODY_TOO_LARGE');
-  return { system, messages };
+  if (body.provider != null && !['groq', 'gemini'].includes(body.provider)) throw new Error('INVALID_BODY');
+  return { system, messages, ...(body.provider ? { provider: body.provider } : {}) };
 }
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store'); res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -21,7 +22,7 @@ export default async function handler(req, res) {
   let input;
   try { if (+req.headers?.['content-length'] > MAX_BODY) throw new Error('BODY_TOO_LARGE'); input = validateChatBody(req.body); }
   catch (error) { return res.status(error.message === 'BODY_TOO_LARGE' ? 413 : 400).json({ error: 'solicitud inválida: revisa los mensajes y su longitud' }); }
-  const controller = new AbortController(), deadline = Date.now() + 25000, timeout = setTimeout(() => controller.abort(), 25000);
+  const controller = new AbortController(), deadline = Date.now() + 28000, timeout = setTimeout(() => controller.abort(), 28000);
   const abort = () => controller.abort(); req.once?.('aborted', abort);
   const post = async (url, init) => {
     controller.signal.throwIfAborted();
@@ -36,27 +37,34 @@ export default async function handler(req, res) {
     res.setHeader('X-RateLimit-Scope', quota.shared ? 'shared' : 'instance');
     if (!quota.allowed) { res.setHeader('Retry-After', String(quota.retryAfter)); return res.status(429).json({ error: 'demasiadas preguntas seguidas, espera un minuto' }); }
     if (process.env.GROQ_API_KEY) {
-      const models = [...new Set([preferred, process.env.GROQ_MODEL, 'llama-3.3-70b-versatile', 'llama-3.1-8b-instant'].filter(Boolean))].slice(0, 3);
+      // Public production models; older Llama IDs now require Enterprise access.
+      // An unavailable custom model must not prevent trying the public defaults.
+      const models = [...new Set([process.env.GROQ_MODEL, preferred, 'openai/gpt-oss-120b', 'openai/gpt-oss-20b'].filter(Boolean))].slice(0, 3);
       for (const model of models) {
-        const body = { model, temperature: 0.2, max_tokens: 900, messages: [{ role: 'system', content: input.system }, ...input.messages] };
-        if (/gpt-oss/.test(model)) body.reasoning_effort = 'low';
-        const result = await post('https://api.groq.com/openai/v1/chat/completions', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${process.env.GROQ_API_KEY}` }, body: JSON.stringify(body) });
-        if (result.status === 401 || result.status === 403) return res.status(502).json({ error: 'la clave del proveedor no es válida' });
+        const body = { model, temperature: 0.2, max_completion_tokens: 2048, messages: [{ role: 'system', content: input.system }, ...input.messages] };
+        if (/gpt-oss/.test(model)) { body.reasoning_effort = 'low'; body.reasoning_format = 'hidden'; }
+        let result;
+        try {
+          result = await post('https://api.groq.com/openai/v1/chat/completions', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${process.env.GROQ_API_KEY}` }, body: JSON.stringify(body) });
+        } catch (error) { if (controller.signal.aborted) throw error; continue; }
+        if (result.status === 401) return res.status(503).json({ code: 'AI_AUTH', error: 'revisa la clave de Groq configurada en el servidor' });
         if (result.status === 429) { res.setHeader('Retry-After', '60'); return res.status(429).json({ error: 'cuota del proveedor alcanzada; espera un momento' }); }
-        const text = result.data.choices?.[0]?.message?.content?.trim();
-        if (result.ok && text) { preferred = model; return res.status(200).json({ text, model }); }
-        if (result.status >= 500) break;
+        const content = result.data.choices?.[0]?.message?.content;
+        const text = typeof content === 'string' ? content.trim() : '';
+        if (result.ok && text) { preferred = model; return res.status(200).json({ text, model, provider: 'groq' }); }
+        // Model-specific permissions, retirement, empty responses and transient
+        // provider errors can recover on the next model within the same deadline.
       }
-      return res.status(502).json({ error: 'el proveedor no respondió; reintenta o usa reglas locales' });
+      return res.status(503).json({ code: 'AI_UNAVAILABLE', error: 'Groq no pudo responder con los modelos disponibles; vuelve a intentarlo' });
     }
-    if (process.env.GEMINI_API_KEY) {
+    if (input.provider !== 'groq' && process.env.GEMINI_API_KEY) {
       const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
       const result = await post(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': process.env.GEMINI_API_KEY }, body: JSON.stringify({ systemInstruction: { parts: [{ text: input.system }] }, contents: input.messages.map((message) => ({ role: message.role === 'assistant' ? 'model' : 'user', parts: [{ text: message.content }] })), generationConfig: { temperature: 0.2, maxOutputTokens: 900, thinkingConfig: { thinkingBudget: 0 } } }) });
       const text = result.data.candidates?.[0]?.content?.parts?.map((part) => part.text || '').join('').trim();
       if (!result.ok || !text) return res.status(result.status === 429 ? 429 : 502).json({ error: 'el proveedor no respondió; reintenta o usa reglas locales' });
       return res.status(200).json({ text, model });
     }
-    return res.status(501).json({ error: 'falta configurar el proveedor de IA en el servidor' });
-  } catch (error) { return res.status(error.name === 'AbortError' || error.name === 'TimeoutError' ? 504 : error.message === 'QUOTA_UNAVAILABLE' ? 503 : 502).json({ error: error.message === 'QUOTA_UNAVAILABLE' ? 'el control de cuota no está disponible; reintenta o usa reglas locales' : 'no se pudo completar la consulta; reintenta o usa reglas locales' }); }
+    return res.status(501).json({ code: 'AI_CONFIG', error: 'falta configurar GROQ_API_KEY en el servidor' });
+  } catch (error) { return res.status(error.name === 'AbortError' || error.name === 'TimeoutError' ? 504 : error.message === 'QUOTA_UNAVAILABLE' ? 503 : 502).json({ code: error.message === 'QUOTA_UNAVAILABLE' ? 'AI_QUOTA_SERVICE' : controller.signal.aborted ? 'AI_TIMEOUT' : 'AI_UNAVAILABLE', error: 'no se pudo completar la consulta de IA; vuelve a intentarlo' }); }
   finally { clearTimeout(timeout); req.removeListener?.('aborted', abort); }
 }

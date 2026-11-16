@@ -35,11 +35,11 @@ afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 const view = () => render(<MantineProvider theme={{ colors: { forest: Array(10).fill('#0c5a43') } }}><Hero /></MantineProvider>);
 
 describe('homepage rendering isolation', () => {
-  it('ignores background progress updates and preserves every headline reveal without redrawing the page', () => {
+  it('ignores background progress updates and preserves every headline reveal without redrawing the page', async () => {
     view();
     expect(draws.particles).not.toHaveBeenCalled();
     const particleObserver = observers.find(o => o.target?.className === 'hero-fx' && o.options?.rootMargin === '500px');
-    act(() => particleObserver.callback([{ isIntersecting: true }]));
+    await act(async () => particleObserver.callback([{ isIntersecting: true }]));
     const particles = draws.particles.mock.calls.length, earth = draws.earth.mock.calls.length;
     expect(screen.getAllByTestId('headline-row')).toHaveLength(1);
     for (let pct = 10; pct <= 100; pct += 10) act(() => useStore.setState(s => ({ agent: { ...s.agent, status: 'running', pct }, killa: { estado: 'analizando', msg: String(pct) } })));

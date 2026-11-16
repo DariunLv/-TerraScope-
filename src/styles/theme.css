@@ -876,6 +876,7 @@ footer .fkilla{display:flex;justify-content:center;margin-bottom:6px}
 
 /* v14 portada: espacio con medio planeta */
 .hero{padding:0;text-align:left}
+.hero-melt-extension{height:1cm;background:#03060f;position:relative;z-index:1;pointer-events:none}
 .hero-fx{display:none}
 .hero-space{position:relative;overflow:hidden;min-height:clamp(560px,86vh,780px);display:flex;align-items:center;background:radial-gradient(120% 90% at 20% 0%,#0b1d3f 0%,#050a1c 55%,#02040c 100%);color:#fff;border-radius:0 0 44px 44px;margin-bottom:54px}
 .hero-stars{position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(1.4px 1.4px at 8% 22%,#fff,transparent),radial-gradient(1px 1px at 22% 70%,#cfe8ff,transparent),radial-gradient(1.6px 1.6px at 34% 12%,#fff,transparent),radial-gradient(1px 1px at 46% 84%,#fff,transparent),radial-gradient(1.2px 1.2px at 58% 30%,#bfe3ff,transparent),radial-gradient(1px 1px at 70% 8%,#fff,transparent),radial-gradient(1.3px 1.3px at 14% 90%,#fff,transparent),radial-gradient(1px 1px at 90% 60%,#fff,transparent),radial-gradient(1px 1px at 4% 52%,#fff,transparent),radial-gradient(1.2px 1.2px at 52% 58%,#d6ecff,transparent);background-size:520px 520px;opacity:.9;animation:starsd 90s linear infinite}

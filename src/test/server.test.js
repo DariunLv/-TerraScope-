@@ -24,10 +24,38 @@ describe('Chat API', () => {
     vi.stubEnv('GROQ_API_KEY', 'key'); const fetch = vi.fn().mockResolvedValue({ ok: false, status: 429, json: async () => ({}) }); vi.stubGlobal('fetch', fetch);
     const res = response(); await handler({ method: 'POST', headers: {}, body: input }, res); expect(res.statusCode).toBe(429); expect(fetch).toHaveBeenCalledTimes(1); expect(res.headers['Retry-After']).toBe('60');
   });
+  it.each([404, 403, 503, 'network', 'empty'])('recovers from %s on a configured model using a public Groq model', async failure => {
+    vi.stubEnv('GROQ_API_KEY', 'private-key'); vi.stubEnv('GROQ_MODEL', 'llama-3.3-70b-versatile');
+    const good = { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'Respuesta recuperada.' } }] }) };
+    const fetch = vi.fn().mockImplementationOnce(async () => {
+      if (failure === 'network') throw new TypeError('Network unavailable');
+      return { ok: failure === 'empty', status: failure === 'empty' ? 200 : failure, json: async () => ({}) };
+    }).mockResolvedValue(good);
+    vi.stubGlobal('fetch', fetch);
+    const res = response(); await handler({ method: 'POST', headers: {}, body: input }, res);
+    expect(res.statusCode).toBe(200); expect(res.body.text).toBe('Respuesta recuperada.');
+    expect(fetch).toHaveBeenCalledTimes(2);
+    const retry = JSON.parse(fetch.mock.calls[1][1].body);
+    expect(retry.model).toMatch(/^openai\/gpt-oss-(120|20)b$/);
+    expect(retry).toMatchObject({ max_completion_tokens: 2048, reasoning_effort: 'low', reasoning_format: 'hidden' });
+    expect(JSON.stringify(res.body)).not.toContain('private-key');
+  });
+  it('identifies an invalid key without retrying or exposing it', async () => {
+    vi.stubEnv('GROQ_API_KEY', 'private-key');
+    const fetch = vi.fn().mockResolvedValue({ ok: false, status: 401, json: async () => ({ error: { message: 'private-key' } }) }); vi.stubGlobal('fetch', fetch);
+    const res = response(); await handler({ method: 'POST', headers: {}, body: input }, res);
+    expect(res.statusCode).toBe(503); expect(res.body.code).toBe('AI_AUTH'); expect(fetch).toHaveBeenCalledOnce();
+    expect(JSON.stringify(res.body)).not.toContain('private-key');
+  });
+  it('keeps an explicit Groq request on Groq instead of silently using another provider', async () => {
+    vi.stubEnv('GEMINI_API_KEY', 'legacy-key'); const fetch = vi.fn(); vi.stubGlobal('fetch', fetch);
+    const res = response(); await handler({ method: 'POST', headers: {}, body: { ...input, provider: 'groq' } }, res);
+    expect(res.statusCode).toBe(501); expect(res.body.code).toBe('AI_CONFIG'); expect(fetch).not.toHaveBeenCalled();
+  });
   it('bounds model retries and handles a missing provider', async () => {
     let res = response(); await handler({ method: 'POST', headers: {}, body: input }, res); expect(res.statusCode).toBe(501);
     vi.stubEnv('GROQ_API_KEY', 'key'); const fetch = vi.fn().mockResolvedValue({ ok: false, status: 404, json: async () => ({}) }); vi.stubGlobal('fetch', fetch);
-    res = response(); await handler({ method: 'POST', headers: {}, body: input }, res); expect(res.statusCode).toBe(502); expect(fetch.mock.calls.length).toBeLessThanOrEqual(3);
+    res = response(); await handler({ method: 'POST', headers: {}, body: input }, res); expect(res.statusCode).toBe(503); expect(fetch.mock.calls.length).toBeLessThanOrEqual(3);
     res = response(); await handler({ method: 'DELETE', headers: {} }, res); expect(res.statusCode).toBe(405); expect(res.headers.Allow).toBe('GET, POST');
   });
   it('fails closed if a shared quota is required but unavailable', async () => {

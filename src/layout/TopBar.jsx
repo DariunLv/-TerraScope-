@@ -6,7 +6,8 @@ import { useT } from '../core/i18n';
 import { SentinelButton } from '../features/decide/AgentPanel';
 export const VIEWS = [['inicio', IconHome, 'Inicio', 'Home'], ['explorar', IconWorldSearch, 'Explorar', 'Explore'], ['lab', IconFlask, 'Laboratorio', 'Lab'], ['decidir', IconShieldCheck, 'Decidir', 'Decide'], ['lagos', IconRipple, 'Lagos', 'Lakes'], ['killa', IconRobot, 'Killa IA', 'Ask Killa'], ['aprender', IconSchool, 'Aprender', 'Learn'], ['proyecto', IconInfoCircle, 'Proyecto', 'Project']];
 export default function Nav() {
-  const { t, lang } = useT(); const { setLang, view, setView, practice, setPractice } = useStore();
+  const { t, lang } = useT();
+  const setLang = useStore(state => state.setLang), view = useStore(state => state.view), setView = useStore(state => state.setView), practice = useStore(state => state.practice), setPractice = useStore(state => state.setPractice);
   return (<>
     <header className="nav">
       <div className="glass navbar">
@@ -25,6 +26,6 @@ export default function Nav() {
 }
 
 export function TabBar() {
-  const { lang } = useT(); const { view, setView } = useStore();
+  const { lang } = useT(), view = useStore(state => state.view), setView = useStore(state => state.setView);
   return <nav className="tabbar">{VIEWS.map(([id, I, es, en]) => <button key={id} className={view === id ? 'on' : ''} onClick={() => setView(id)}><I size={20} /><span>{lang === 'es' ? es : en}</span></button>)}</nav>;
 }

@@ -14,7 +14,7 @@ export const TOPICS = [
     ['¿Qué es NASA POWER?', 'What is NASA POWER?'], ['¿Qué puedo ver en el planeta 3D?', 'What can I see on the 3D planet?'], ['¿Qué satélites ayudan a estudiar el agua?', 'Which satellites help study water?'],
   ] },
   { id: 'water', es: 'Agua y clima', en: 'Water & climate', prompts: [
-    ['¿El balance climático es el nivel real del lago?', 'Is climate balance the real lake level?'], ['¿Cómo comparo los tres escenarios?', 'How do I compare the three scenarios?'], ['¿Cómo investigo el lugar seleccionado?', 'How do I investigate the selected place?'],
+    ['¿El balance climático es el nivel real del lago?', 'Is climate balance the real lake level?'], ['¿Cómo comparo los tres escenarios?', 'How do I compare the three scenarios?'], ['¿Cómo inicio una investigación en el laboratorio?', 'How do I start an investigation in the lab?'],
   ] },
   { id: 'statistics', es: 'Estadística sencilla', en: 'Simple statistics', prompts: [
     ['¿Cómo sé si una tendencia es significativa?', 'How do I know whether a trend is significant?'], ['Explícame la pendiente de Sen con un ejemplo.', 'Explain Sen’s slope with an example.'], ['¿Qué significa el intervalo de confianza?', 'What does a confidence interval mean?'],
@@ -27,6 +27,9 @@ export const TOPICS = [
   ] },
   { id: 'learn', es: 'Aprender paso a paso', en: 'Learn step by step', prompts: [
     ['¿Por dónde empiezo para aprender a leer los gráficos?', 'Where should I start learning to read charts?'], ['¿Una correlación demuestra una causa?', 'Does a correlation prove a cause?'], ['¿Cómo puedo comprobar los datos con otra fuente?', 'How can I check the data with another source?'],
+  ] },
+  { id: 'general', es: 'Preguntas generales', en: 'General questions', prompts: [
+    ['Ayúdame a redactar un correo profesional.', 'Help me write a professional email.'], ['Explícame un concepto difícil con un ejemplo sencillo.', 'Explain a difficult concept with a simple example.'], ['Ayúdame a organizar un plan de estudio.', 'Help me organise a study plan.'],
   ] },
 ];
 
@@ -62,7 +65,7 @@ export function localAnswer(question, lang) {
 
 export const messageId = () => globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 export function answerSource(mode, lang) {
-  const labels = { online: ['Modelo en línea', 'Online model'], ollama: ['Ollama local', 'Local Ollama'], claude: ['Claude', 'Claude'], rules: ['Reglas locales', 'Local rules'], local: ['Guía local', 'Local guide'], note: ['Aviso', 'Notice'] };
+  const labels = { online: ['Groq', 'Groq'], ollama: ['Ollama local', 'Local Ollama'], claude: ['Claude', 'Claude'], rules: ['Reglas locales', 'Local rules'], local: ['Guía local', 'Local guide'], note: ['Aviso', 'Notice'], error: ['Aviso de conexión', 'Connection notice'] };
   return (labels[mode] || labels.online)[lang === 'es' ? 0 : 1];
 }
 export function conversationText(messages, lang) {

@@ -21,7 +21,7 @@ import Interpret from '../../shared/Interpret';
 import { echartsFacts, tableFacts } from '../../shared/charts/chartFacts';
 import Killa, { KillaNote } from '../../killa/Killa';
 import { reply, chips } from './copilot';
-import { getCfg, setCfg, askLLM, buildContext } from './llm';
+import { getCfg, setCfg, askLLM, buildContext, llmErrorMessage } from './llm';
 import { EChart } from '../../shared/charts/hooks';
 import PageHead from '../../layout/PageHead';
 import CountUp from '../../ui/CountUp';
@@ -66,11 +66,11 @@ function Chat({ A, tgt, ann, sweep, clim, L, lang }) {
       if (cfg.mode === 'rules') { if (request.current()) setMsgs((m) => [...m, { me: false, tag: 'rules', ...rule }]); return; }
       const text = await askLLM(cfg, { signal: request.signal, question: q, history: hist, ctx: buildContext(A, tgt, clim, useStore.getState().agent, lang, coherence(A, tgt, clim, sweep?.rows, L)), calc: rule.miss ? null : rule.text, lang });
       if (request.current()) setMsgs((m) => [...m, { me: false, tag: 'ai', text }]);
-    } catch (e) { if (request.current() && !aborted(e)) setMsgs((m) => [...m, { me: false, tag: 'rules', ...rule, note: L(`${e.message}. Respondí con reglas locales.`, `${e.message}. Answered with local rules.`) }]); }
+    } catch (e) { if (request.current()) setMsgs((m) => [...m, { me: false, tag: 'rules', ...rule, note: llmErrorMessage(e, lang) + ' ' + L('Esta lectura usa los cálculos locales.', 'This explanation uses local calculations.') }]); }
     finally { if (request.current()) setBusy(false); }
   };
   useEffect(() => { const h = (e) => send(e.detail); window.addEventListener('td-ask', h); return () => window.removeEventListener('td-ask', h); });
-  const probar = async () => { setTest(L('Probando…', 'Testing…')); try { const t = await askLLM(cfg, { question: L('Responde solo: listo', 'Reply only: ready'), history: [], ctx: { prueba: true }, calc: null, lang, noVerify: true }); setTest('OK: ' + t.slice(0, 60)); } catch (e) { setTest(L('Falló: ', 'Failed: ') + e.message); } };
+  const probar = async () => { setTest(L('Probando…', 'Testing…')); try { const t = await askLLM(cfg, { question: L('Responde solo: listo', 'Reply only: ready'), history: [], ctx: { prueba: true }, calc: null, lang, noVerify: true }); setTest('OK: ' + t.slice(0, 60)); } catch (e) { setTest(llmErrorMessage(e, lang)); } };
   const modeName = cfg.mode === 'ollama' ? L(`IA local (${cfg.ollamaModel})`, `Local AI (${cfg.ollamaModel})`) : cfg.mode === 'claude' ? L('IA Claude (API)', 'Claude AI (API)') : cfg.mode === 'online' ? L('IA en línea', 'Online AI') : L('Reglas locales', 'Local rules');
   return (
     <div className="chat card" id="asistente">

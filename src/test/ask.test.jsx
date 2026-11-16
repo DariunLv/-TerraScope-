@@ -8,7 +8,7 @@ import { askLLM, getCfg, setCfg } from '../features/decide/llm';
 import { KNOWLEDGE, TOPICS, localAnswer, conversationText } from '../features/ask/askContent';
 import { useStore } from '../core/store';
 
-vi.mock('../features/decide/llm', () => ({ askLLM: vi.fn(), getCfg: vi.fn(), setCfg: vi.fn() }));
+vi.mock('../features/decide/llm', async original => ({ ...await original(), askLLM: vi.fn(), getCfg: vi.fn(), setCfg: vi.fn() }));
 vi.mock('../layout/PageHead', () => ({ default: ({ title, sub }) => <header><h1>{title}</h1><p>{sub}</p></header> }));
 vi.mock('../killa/Killa', () => ({ default: () => <span aria-hidden="true">Mascot</span> }));
 vi.mock('../ui/Ghost', () => ({ default: () => null }));
@@ -26,6 +26,26 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 describe('Killa conversation', () => {
+  it.each([
+    ['es', 'Ayúdame a redactar un correo profesional.', 'Asunto: Solicitud de información.'],
+    ['en', 'Write a Python function that adds two numbers.', 'def add(a, b): return a + b'],
+  ])('uses Groq for unrestricted %s questions without sending the selected place', async (lang, text, reply) => {
+    const user = userEvent.setup();
+    useStore.setState({ lang }); getCfg.mockReturnValue({ ...config, mode: 'rules' });
+    askLLM.mockResolvedValue(reply); view();
+    expect(screen.queryByText(/Moquegua/)).toBeNull();
+    const input = screen.getByRole('textbox', { name: lang === 'es' ? 'Tu pregunta' : 'Your question' });
+    await user.type(input, text);
+    await user.click(screen.getByRole('button', { name: lang === 'es' ? 'Enviar' : 'Send', exact: true }));
+    expect(await screen.findByText(reply)).toBeTruthy();
+    expect(askLLM).toHaveBeenCalledWith(expect.objectContaining({ mode: 'online' }), expect.objectContaining({ question: text, lang, raw: true, noVerify: true }));
+    const system = askLLM.mock.lastCall[1].sys;
+    expect(system).toContain('matching the language');
+    expect(system).not.toContain('Moquegua');
+    expect(system).not.toContain('selectedPlace');
+    expect(system).not.toContain('activeInventoryCount');
+  });
+
   it('lets users edit suggestions, write several lines, send with Enter, copy and export with provenance', async () => {
     const user = userEvent.setup();
     view();
@@ -37,12 +57,12 @@ describe('Killa conversation', () => {
     expect(askLLM).not.toHaveBeenCalled();
     await user.keyboard('{Enter}');
     const answer = await screen.findByRole('article', { name: 'Respuesta de Killa' });
-    expect(within(answer).getByText('Modelo en línea')).toBeTruthy();
+    expect(within(answer).getByText('Groq')).toBeTruthy();
     expect(askLLM).toHaveBeenCalledOnce();
     expect(askLLM.mock.calls[0][1].question).toContain('\nExplícalo');
-    expect(askLLM.mock.calls[0][1].sys).toContain('Moquegua');
+    expect(askLLM.mock.calls[0][1].sys).not.toContain('Moquegua');
     expect(askLLM.mock.calls[0][1].sys.length).toBeLessThan(10000);
-    expect(askLLM.mock.calls[0][1].sys).toContain('numericalAnalysisInThisChat');
+    expect(askLLM.mock.calls[0][1].sys).toContain('general-purpose AI assistant');
     const clipboard = vi.spyOn(navigator.clipboard, 'writeText');
     await user.click(within(answer).getByRole('button', { name: 'Copiar respuesta' }));
     expect(clipboard).toHaveBeenCalledWith('Esta es la explicación del modelo.');
@@ -57,17 +77,19 @@ describe('Killa conversation', () => {
     expect(revoke).toHaveBeenCalledWith('blob:conversation');
   });
 
-  it('identifies provider timeouts as local fallbacks and allows a retry', async () => {
+  it('shows a readable provider timeout without a canned answer and allows a retry', async () => {
     const user = userEvent.setup();
     askLLM.mockRejectedValueOnce(new DOMException('Provider timed out', 'AbortError'));
     view();
     await submit(user, '¿Qué es NASA POWER?');
-    expect(await screen.findByText(/NASA POWER ofrece series climáticas/)).toBeTruthy();
-    expect(screen.getByText('Guía local')).toBeTruthy();
-    expect(screen.getByText('El modelo no respondió. Esta es una guía local preparada.')).toBeTruthy();
+    expect(await screen.findByText('La IA tardó demasiado en responder. Puedes volver a intentarlo.')).toBeTruthy();
+    expect(screen.queryByText('Guía local')).toBeNull();
+    expect(screen.queryByText(/HTTP|502|Respondí con reglas/)).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Reintentar última pregunta' }));
     expect(await screen.findByText('Esta es la explicación del modelo.')).toBeTruthy();
     expect(askLLM).toHaveBeenCalledTimes(2);
+    expect(askLLM.mock.lastCall[1].history.some(message => message.source === 'error')).toBe(false);
+    expect(askLLM.mock.lastCall[1].history.at(-1)?.text).not.toBe('¿Qué es NASA POWER?');
   });
 
   it('cancels work, ignores a late response and accepts a new question immediately', async () => {
@@ -174,16 +196,17 @@ describe('Killa conversation', () => {
     await user.click(screen.getByRole('button', { name: 'Ver el último mensaje' }));
     expect(log.scrollTo).toHaveBeenCalledWith({ top: 1200, behavior: 'auto' });
     expect(screen.queryByRole('button', { name: 'Ver el último mensaje' })).toBeNull();
-    expect(new URL(screen.getByRole('link', { name: 'Investigar este lugar' }).href).searchParams.get('vista')).toBe('lab');
+    expect(screen.queryByText('Moquegua, Perú')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Probar una pregunta general' })).toBeTruthy();
   });
 });
 
 it('provides local guidance for every published topic and exports the source of each answer', () => {
-  for (const topic of TOPICS) for (const prompt of topic.prompts) for (const [index, lang] of [[0, 'es'], [1, 'en']]) expect(localAnswer(prompt[index], lang).view).toBeTruthy();
+  for (const topic of TOPICS.filter(item => item.id !== 'general')) for (const prompt of topic.prompts) for (const [index, lang] of [[0, 'es'], [1, 'en']]) expect(localAnswer(prompt[index], lang).view).toBeTruthy();
   expect(localAnswer('¿Cómo funciona Centinela?', 'es').text).not.toContain('pendiente de Sen');
   expect(localAnswer('¿Cómo sé si una tendencia es significativa?', 'es').text).toContain('No es la probabilidad');
   expect(KNOWLEDGE.length).toBeLessThan(8500);
   const text = conversationText([{ me: true, text: 'Pregunta' }, { me: false, source: 'online', text: 'Respuesta' }, { me: false, source: 'local', text: 'Guía' }], 'es');
-  expect(text).toContain('Killa · Modelo en línea');
+  expect(text).toContain('Killa · Groq');
   expect(text).toContain('Killa · Guía local');
 });
