@@ -149,15 +149,14 @@ function Warning({ cur, L }) {
 
 export default function Intel({ cur, res, pname }) {
   const { lang } = useT(); const L = (a, b) => (lang === 'es' ? a : b); const pal = usePal();
-  const [tab, setTab] = useState('g50');
-  const T = [['g50', IconWorld, L('Planeta 3D · 2050', '3D planet · 2050')], ['anom', IconRadar2, L('Anomalías', 'Anomalies')], ['fut', IconCrystalBall, L('Pronóstico y escenarios', 'Forecast and scenarios')], ['ews', IconActivityHeartbeat, L('Alerta temprana', 'Early warning')]];
+  const [tab, setTab] = useState('anom');
+  const T = [['anom', IconRadar2, L('Anomalías', 'Anomalies')], ['fut', IconCrystalBall, L('Pronóstico y escenarios', 'Forecast and scenarios')], ['ews', IconActivityHeartbeat, L('Alerta temprana', 'Early warning')]];
   if (cur.raw.length < 60) return <Alert radius="lg" color="gray">{L('Se necesitan al menos 5 años de datos mensuales.', 'At least 5 years of monthly data are needed.')}</Alert>;
   return (<>
-    <div className="subtabs">{T.map(([v, Ic, l]) => <button key={v} className={(tab === v ? 'on' : '') + (v === 'g50' ? ' hot' : '')} onClick={() => setTab(v)}><Ic size={15} />{l}</button>)}</div>
+    <div className="subtabs">{T.map(([v, Ic, l]) => <button key={v} className={(tab === v ? 'on' : '')} onClick={() => setTab(v)}><Ic size={15} />{l}</button>)}</div>
     <div style={{ paddingTop: 14 }}>
       {tab === 'anom' && <Anomalies cur={cur} res={res} pname={pname} L={L} lang={lang} />}
       {tab === 'fut' && <Future cur={cur} L={L} lang={lang} pal={pal} />}
-      {tab === 'g50' && <Suspense fallback={<Wait />}><Planet2050 cur={cur} res={res} pname={pname} L={L} lang={lang} /></Suspense>}
       {tab === 'ews' && <Warning cur={cur} L={L} />}
     </div>
   </>);

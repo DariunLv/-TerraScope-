@@ -18,6 +18,32 @@ const spring = (state, goal, stiffness, damping, dt) => {
 
 const resolveElement = value => (value && 'current' in value ? value.current : value) || null;
 
+
+/* Detecta "cards" que no llevan clase conocida: ancestro redondeado, con borde, sombra o fondo propio y tamaño de tarjeta. */
+const alphaOf = c => {
+  if (!c || c === 'transparent') return 0;
+  const m = c.match(/rgba?\(([^)]+)\)/);
+  if (!m) return 1;
+  const p = m[1].split(/[ ,/]+/).filter(Boolean);
+  return p.length > 3 ? parseFloat(p[3]) : 1;
+};
+const SKIP = /^(HTML|BODY|MAIN|SECTION|SVG|CANVAS|IMG|VIDEO|P|SPAN|B|I|STRONG|EM|A|LI|UL|OL|H1|H2|H3|H4|H5|H6|LABEL|SMALL|TABLE|TBODY|TR|TD|TH|THEAD)$/i;
+const cardLike = start => {
+  let el = start instanceof Element ? start : start?.parentElement;
+  for (let i = 0; el && i < 9 && el !== document.body && el !== document.documentElement; i++, el = el.parentElement) {
+    if (SKIP.test(el.tagName) || el.closest('.target-cursor')) continue;
+    const r = el.getBoundingClientRect();
+    if (r.width < 70 || r.height < 30 || r.width > window.innerWidth * 0.97 || r.height > 1500) continue;
+    const cs = getComputedStyle(el);
+    if (cs.display === 'inline' || cs.display === 'contents') continue;
+    const rad = parseFloat(cs.borderTopLeftRadius) || 0;
+    if (rad < 8) continue;
+    const bordered = (parseFloat(cs.borderTopWidth) || 0) > 0 && alphaOf(cs.borderTopColor) > 0.05;
+    if (bordered || (cs.boxShadow && cs.boxShadow !== 'none') || alphaOf(cs.backgroundColor) > 0.3) return el;
+  }
+  return null;
+};
+
 const TargetCursor = ({
   targetSelector = '.cursor-target',
   cursorColor = '#ffffff',
@@ -119,7 +145,9 @@ const TargetCursor = ({
     const findTarget = (x, y, element) => {
       const s = settingsRef.current;
       const node = element || document.elementFromPoint(x, y);
-      const found = node?.closest?.(s.targetSelector) || null;
+      let found = null;
+      try { found = node?.closest?.(s.targetSelector) || null; } catch { found = null; }
+      if (!found) found = cardLike(node);
       const scope = scopeOf();
       if (found && scope && !scope.contains(found)) return null;
       return found;

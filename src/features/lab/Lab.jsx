@@ -3,7 +3,7 @@ import Ghost from '../../ui/Ghost';
 import AutoExplain, { stats as seriesStats } from '../../shared/charts/AutoExplain';
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Button, Chip, RangeSlider, Select, SegmentedControl, Switch, Tooltip, Progress, Alert, Group, Tabs } from '@mantine/core';
-import { IconDownload, IconTrendingUp, IconTrendingDown, IconEqual, IconCheck, IconX, IconSearch, IconUpload, IconMessageQuestion, IconFolders, IconAdjustments, IconGauge, IconChartDots3, IconArrowsLeftRight, IconRadar2, IconFlask } from '@tabler/icons-react';
+import { IconWorld, IconCrystalBall, IconDownload, IconTrendingUp, IconTrendingDown, IconEqual, IconCheck, IconX, IconSearch, IconUpload, IconMessageQuestion, IconFolders, IconAdjustments, IconGauge, IconChartDots3, IconArrowsLeftRight, IconRadar2, IconFlask } from '@tabler/icons-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import * as S from '../../lib/analysis/stats';
@@ -23,7 +23,10 @@ import PageHead from '../../layout/PageHead';
 import SpotlightCard from '../../ui/SpotlightCard';
 import CountUp from '../../ui/CountUp';
 const Analytics = lazy(() => import('./Analytics'));
+const Forecast = lazy(() => import('../../shared/analysis/Forecast'));
 const Intel = lazy(() => import('../../shared/analysis/Intel'));
+const Surface3D = lazy(() => import('./Analytics').then((m) => ({ default: m.Surface3D })));
+const Planet2050 = lazy(() => import('../../shared/analysis/Planet2050'));
 const COL = { strong: '#0c5a43', likely: '#1e3a8a', weak: '#d97706', none: '#868e96' };
 const fmt = (x, d) => (Math.abs(x) < 0.001 && x !== 0 ? x.toExponential(1) : x.toFixed(d));
 const fp = (p) => (p < 0.001 ? '< 0.001' : p.toFixed(3));
@@ -35,10 +38,8 @@ export default function Lab() {
   const [years, setYears] = useState([1981, 2025]); const [ds, setDs] = useState(true);
   const sec = useStore((s) => s.sec), secN = useStore((s) => s.secN);
   useEffect(() => { if (sec && sec.startsWith('lab:')) setTab(sec.slice(4)); }, [secN]); // eslint-disable-line
-  const [busy, setBusy] = useState(false); const [res, setRes] = useState(null); const [sel, setSel] = useState(null); const [note, setNote] = useState(''); const [tab, setTab] = useState('resumen');
+  const [busy, setBusy] = useState(false); const [res, setRes] = useState(null); const [sel, setSel] = useState(null); const [note, setNote] = useState(''); const [tab, setTab] = useState('resumen'); const [o3, setO3] = useState('none');
   const out = useRef(null);
-  const want3d = useStore((s) => s.want3d);
-  useEffect(() => { if (!want3d) return; (async () => { await run({}); setTab(want3d.kind === 'planet' ? 'intel' : 'avanzado'); setTimeout(() => document.querySelector('.subtabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 900); })(); }, [want3d?.n]); // eslint-disable-line
   const placeData = PLACES.map((p) => ({ value: p.id, label: p[lang] })).concat(place.id === 'custom' ? [{ value: 'custom', label: placeLabel(place, PLACES, lang) }] : []);
   const run = async (o = {}) => {
     const vs = o.vars || vars, pl = o.place || place, yr = o.years || years, dsv = o.ds ?? ds; if (!vs.length) return;
@@ -68,7 +69,6 @@ export default function Lab() {
     <section id="lab"><div className="wrap">
       <PageHead icon={IconFlask} eyebrow={L('Laboratorio del detective', 'Detective lab')} title={L('Investiga un lugar paso a paso', 'Investigate a place step by step')} sub={L('Elige cómo empezar. Siempre terminas con lo mismo: qué cambia, cuánto cambia y si el cambio es significativo.', 'Choose how to start. You always end with the same: what changes, how much, and whether the change is significant.')} />
       <div className="card panel startcard"><Ghost k="flask" i={1} size={210} pos={0} />
-        <div className="go3d"><span>{L('Gráficos 3D', '3D charts')}</span><Button size="compact-sm" radius="xl" color="navy" onClick={() => useStore.getState().open3D('planet')}>{L('Planeta 3D · 2050', '3D planet · 2050')}</Button><Button size="compact-sm" radius="xl" variant="light" color="navy" onClick={() => useStore.getState().open3D('surface')}>{L('Superficie 3D año × mes', '3D surface year × month')}</Button></div>
         <SegmentedControl fullWidth color="forest" value={start} onChange={setStart} data={[
           { value: 'guia', label: <span className="seg"><IconMessageQuestion size={16} />{L('Preguntas guiadas', 'Guided questions')}</span> },
           { value: 'casos', label: <span className="seg"><IconFolders size={16} />{L('Casos de ejemplo', 'Example cases')}</span> },
@@ -114,8 +114,9 @@ export default function Lab() {
               <Tabs value={tab} onChange={(v) => { setTab(v); useStore.getState().setSec('lab:' + v); }} color="forest" variant="pills" keepMounted={false}>
                 <Tabs.List grow>
                   <Tabs.Tab value="resumen" leftSection={<IconGauge size={16} />}>{L('Resumen', 'Summary')}</Tabs.Tab>
-                  <Tabs.Tab value="avanzado" leftSection={<IconChartDots3 size={16} />}>{L('Análisis avanzado', 'Advanced analysis')}</Tabs.Tab>
-                  <Tabs.Tab value="intel" leftSection={<IconRadar2 size={16} />}>{L('Anomalías y futuro', 'Anomalies and future')}</Tabs.Tab>
+                  <Tabs.Tab value="avanzado" leftSection={<IconChartDots3 size={16} />}>{L('Series de tiempo', 'Time series')}</Tabs.Tab>
+                  <Tabs.Tab value="pred" leftSection={<IconCrystalBall size={16} />}>{L('Predicción', 'Forecast')}</Tabs.Tab>
+                  <Tabs.Tab value="intel" leftSection={<IconRadar2 size={16} />}>{L('Anomalías y alertas', 'Anomalies and alerts')}</Tabs.Tab>
                   <Tabs.Tab value="comparar" leftSection={<IconArrowsLeftRight size={16} />}>{L('Comparar', 'Compare')}</Tabs.Tab>
                 </Tabs.List>
                 <Tabs.Panel value="resumen" pt="md">
@@ -137,6 +138,7 @@ export default function Lab() {
                   <div className="row" style={{ justifyContent: 'space-between' }}><span className="mini">{t.disclaimer}</span><button className="textlink" onClick={csv}><IconDownload size={14} /> {t.exportCsv}</button></div>
                 </Tabs.Panel>
                 <Tabs.Panel value="avanzado" pt="md"><Suspense fallback={null}><Analytics cur={cur} res={res} /></Suspense></Tabs.Panel>
+                <Tabs.Panel value="pred" pt="md">{cur.raw.length < 72 ? <Alert radius="lg" color="gray">{L('Se necesitan al menos 6 años de datos mensuales.', 'At least 6 years of monthly data are needed.')}</Alert> : <Suspense fallback={null}><Forecast cur={cur} pname={pname(res.pl)} /></Suspense>}</Tabs.Panel>
                 <Tabs.Panel value="intel" pt="md"><Suspense fallback={null}><Intel cur={cur} res={res} pname={pname(res.pl)} /></Suspense></Tabs.Panel>
                 <Tabs.Panel value="comparar" pt="md">
                   {res.list.length > 1 && (<>
@@ -161,6 +163,12 @@ export default function Lab() {
                   {cur.k !== 'CSV' && <Compare key={cur.k} k={cur.k} a={cur.r} aName={pname(res.pl)} years={years} ds={ds} live={res.live} />}
                 </Tabs.Panel>
               </Tabs>
+            </div>
+            <div className="card panel opt3d">
+              <div className="opt3d-h"><span className="opt3d-t"><IconWorld size={18} />{L('Opcional · vistas en 3D', 'Optional · 3D views')}</span><span className="mini">{L('Complementan el análisis de arriba; no hace falta abrirlas.', 'They complement the analysis above; you do not need to open them.')}</span></div>
+              <SegmentedControl color="navy" size="sm" value={o3} onChange={(v) => setO3(v === o3 ? 'none' : v)} data={[{ value: 'none', label: L('Ocultar', 'Hide') }, { value: 'planet', label: L('Planeta 3D · 2050', '3D planet · 2050') }, { value: 'surface', label: L('Superficie 3D año × mes', '3D surface year × month') }]} />
+              {o3 === 'planet' && <div style={{ marginTop: 14 }}><Suspense fallback={null}><Planet2050 cur={cur} res={res} pname={pname(res.pl)} L={L} lang={lang} /></Suspense></div>}
+              {o3 === 'surface' && <div style={{ marginTop: 14 }}><h4 className="sh">{L('Superficie 3D año × mes: gira con el ratón', '3D surface year × month: drag to rotate')}</h4><Suspense fallback={null}><Surface3D cur={cur} /></Suspense></div>}
             </div>
           </motion.div>
         )}

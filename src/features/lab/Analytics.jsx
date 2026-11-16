@@ -1,4 +1,3 @@
-import { useStore } from '../../core/store';
 import Interpret from '../../shared/Interpret';
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { Tabs, Loader, Select, Table, Badge, Button, Alert } from '@mantine/core';
@@ -42,7 +41,7 @@ function Series({ cur, pal, L }) {
           { x: x1, y: roll, type: 'scatter', mode: 'lines', name: L('Media móvil 12 m', '12-mo mean'), line: { color: pal.c[1], width: 3 } },
           { x: [...x1, ...x1.slice().reverse()], y: [...up, ...lo.slice().reverse()], fill: 'toself', type: 'scatter', mode: 'none', name: 'IC 95 % (OLS)', fillcolor: 'rgba(251,191,36,.18)', hoverinfo: 'skip' },
           { x: x1, y: b.fit, type: 'scatter', mode: 'lines', name: L('Tendencia', 'Trend'), line: { color: pal.c[3], width: 2.5, dash: 'dash' } },
-        ]} layout={{ xaxis: { rangeslider: { thickness: 0.07 }, type: 'date', gridcolor: pal.grid }, yaxis: { title: V[cur.k].u, gridcolor: pal.grid }, hovermode: 'x unified' }} />
+        ]} layout={{ xaxis: { rangeslider: { thickness: 0.07 }, type: 'date', gridcolor: pal.grid, rangeselector: { buttons: [{ count: 5, label: '5y', step: 'year', stepmode: 'backward' }, { count: 10, label: '10y', step: 'year', stepmode: 'backward' }, { count: 20, label: '20y', step: 'year', stepmode: 'backward' }, { step: 'all', label: L('Todo', 'All') }], bgcolor: 'rgba(12,90,67,.12)', activecolor: 'rgba(12,90,67,.35)', x: 0, y: 1.16, xanchor: 'left' } }, yaxis: { title: V[cur.k].u, gridcolor: pal.grid }, hovermode: 'x unified', legend: { orientation: 'h', x: 0.3, y: 1.12 }, margin: { l: 60, r: 20, t: 60, b: 40 } }} />
         <h4 className="sh">{L('Descomposición clásica (observado = tendencia + estación + residuo)', 'Classical decomposition (observed = trend + season + residual)')}</h4>
         <P pal={pal} h={460} data={[
           { x: x1, y: raw.map((p) => p.v), name: L('Observado', 'Observed'), type: 'scatter', mode: 'lines', line: { color: pal.c[5], width: 1.2 }, xaxis: 'x', yaxis: 'y' },
@@ -109,7 +108,16 @@ function Seasonal({ cur, pal, L, lang }) {
       <div><h4 className="sh">{L('Caja por mes (ciclo estacional y dispersión)', 'Box by month (seasonal cycle & spread)')}</h4><EChart option={o1} deps={[raw, pal]} h={300} /></div>
       <div><h4 className="sh">{L('Radar del ciclo: ¿se desplazó la estación?', 'Cycle radar: did the season shift?')}</h4><EChart option={o2} deps={[raw, pal]} h={300} /></div>
       <div style={{ gridColumn: '1 / -1' }}><h4 className="sh">{L('Valores crudos año × mes (ECharts)', 'Raw values year × month (ECharts)')}</h4><EChart option={o3} deps={[raw, pal]} h={420} /></div>
-      <div style={{ gridColumn: '1 / -1' }}><h4 className="sh">{L('Superficie 3D año × mes (Plotly): gira con el ratón', '3D surface year × month (Plotly): drag to rotate')}</h4>
+    </div>
+  );
+}
+
+export function Surface3D({ cur }) {
+  const { lang } = useT(); const pal = usePal(); const L = (a, b) => (lang === 'es' ? a : b);
+  const { raw } = cur, M = lang === 'es' ? MON : MONE, years = [...new Set(raw.map((p) => p.year))];
+  return (
+    <div>
+      <div ><h4 className="sh">{L('Superficie 3D año × mes (Plotly): gira con el ratón', '3D surface year × month (Plotly): drag to rotate')}</h4>
         <Suspense fallback={<Wait />}><P pal={pal} h={460} data={[{ type: 'surface', x: M, y: years, z: years.map((yr) => Array.from({ length: 12 }, (_, m) => { const p = raw.find((q) => q.year === yr && q.month === m); return p ? p.v : null; })), colorscale: [[0, '#1e40af'], [0.5, '#f7f4ec'], [1, '#c2410c']], showscale: false, contours: { z: { show: true, usecolormap: true, project: { z: true } } } }]} layout={{ margin: { l: 0, r: 0, t: 0, b: 0 }, scene: { xaxis: { title: '' }, yaxis: { title: '' }, zaxis: { title: V[cur.k].u }, camera: { eye: { x: 1.6, y: -1.6, z: 0.9 } } } }} /></Suspense></div>
     </div>
   );
@@ -306,12 +314,12 @@ function Validation({ cur, pal, L }) {
 export default function Analytics({ cur, res }) {
   const { lang } = useT(); const pal = usePal(); const L = (a, b) => (lang === 'es' ? a : b);
   const G = [
-    [L('Tendencia', 'Trend'), [['series', IconChartLine, L('Serie y descomposición', 'Series & decomposition'), Series], ['per', IconCalendarTime, L('Todos los periodos', 'All periods'), Periods], ['rob', IconShieldCheck, L('Robustez', 'Robustness'), Robust]]],
+    [L('Series de tiempo', 'Time series'), [['series', IconChartLine, L('Serie y descomposición', 'Series & decomposition'), Series], ['day', IconBolt, L('Serie diaria', 'Daily series'), Daily], ['per', IconCalendarTime, L('Todos los periodos', 'All periods'), Periods], ['rob', IconShieldCheck, L('Robustez', 'Robustness'), Robust]]],
     [L('Forma y estaciones', 'Shape & seasons'), [['dist', IconChartHistogram, L('Distribución', 'Distribution'), Distribution], ['seas', IconCalendarStats, L('Ciclo estacional', 'Seasonal cycle'), Seasonal]]],
     [L('Relaciones', 'Relations'), [['rel', IconGitCompare, L('Entre variables', 'Between variables'), Relations], ['mem', IconRipple, L('Memoria', 'Memory'), Memory]]],
-    [L('Datos', 'Data'), [['day', IconBolt, L('Serie diaria', 'Daily series'), Daily], ['val', IconRuler2, L('Validar con estación', 'Validate with station'), Validation], ['sum', IconTable, L('Tabla resumen', 'Summary table'), Summary]]],
+    [L('Datos', 'Data'), [['val', IconRuler2, L('Validar con estación', 'Validate with station'), Validation], ['sum', IconTable, L('Tabla resumen', 'Summary table'), Summary]]],
   ];
-  const ai = useStore.getState().anInit; const [g, setG] = useState(ai === 'seas' ? '1' : '0'); const [tab, setTab] = useState(ai || 'series');
+  const [g, setG] = useState('0'); const [tab, setTab] = useState('series');
   const tabs = G[+g][1], act = tabs.find((x) => x[0] === tab) || tabs[0], C = act[3];
   return (
     <div>

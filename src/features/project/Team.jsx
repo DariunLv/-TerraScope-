@@ -11,7 +11,7 @@ export default function Team() {
   return (
     <section id="equipo"><div className="wrap" style={{ textAlign: 'center' }}>
       <div style={{ display: 'flex', justifyContent: 'center' }}><Killa estado="orgullosa" size={170} /></div>
-      <h2>{t.teamTitle} · The Innovators</h2>
+      <h2>{t.teamTitle} · The Innovators YF</h2>
       <div className="team">{m.map(([n, r, i]) => <SpotlightCard key={n} theme={theme} className="member"><div className="avatar"><img src={i} alt={n} loading="lazy" /></div><h3 style={{ margin: '10px 0 2px' }}>{n}</h3><span className="tag how">{r}</span></SpotlightCard>)}</div>
     </div></section>
   );

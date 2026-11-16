@@ -76,8 +76,6 @@ export default function About() {
             <li><LuTrafficCone size={18} />{L('Te dice qué hacer y qué tan seguro está.', 'Tells you what to do and how sure it is.')}</li>
             <li><LuFingerprint size={18} />{L('No inventa cifras: un verificador descarta respuestas con números que la app no calculó.', 'Never invents figures: a verifier discards answers with numbers the app did not compute.')}</li>
           </ul>
-          <Button size="md" radius="xl" variant="white" color="forest" onClick={() => useStore.getState().open3D('planet')}>{L('Ver el planeta 3D · 2050', 'See the 3D planet · 2050')}</Button>
-          <Button size="md" radius="xl" variant="white" color="forest" onClick={() => useStore.getState().open3D('surface')}>{L('Ver la superficie 3D', 'See the 3D surface')}</Button>
           <Button size="md" radius="xl" color="forest" rightSection={<IconArrowRight size={18} />} onClick={() => setView('killa')}>{L('Preguntarle a Killa', 'Ask Killa')}</Button>
         </div>
         <div className="about-ai-r"><Killa estado="explicando" size={250} /></div>

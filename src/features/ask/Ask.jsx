@@ -10,7 +10,7 @@ import Rich from '../../shared/Rich';
 import Ghost from '../../ui/Ghost';
 import { askLLM, getCfg } from '../decide/llm';
 import { useT } from '../../core/i18n';
-const KB = `APP: TerraScope / “Trend Detectives” (Detectives de Tendencias), made by team The Innovators (Yeferson Dariun Laura Livise, Flor Melany Yanarico Huanca, from Puno, Peru) inspired by the idea of being an Earth System Trend Detective.
+const KB = `APP: TerraScope / “Trend Detectives” (Detectives de Tendencias), made by team The Innovators YF (Yeferson Dariun Laura Livise, Flor Melany Yanarico Huanca, from Puno, Peru) inspired by the idea of being an Earth System Trend Detective.
 WHAT IT DOES: reads NASA data for a place (a Peruvian lake or any point), detects whether climate/water variables are changing (trend vs noise), and gives a traffic light (calm / watch / alert), three possible futures (dry hazard, recent climate, wet year), a plain-language explanation, a Sentinel that watches 39 Peruvian lakes, an evidence passport (shareable verified report) and lessons.
 VIEWS: Home; Explore (3D Cesium planet with NASA GIBS layers, country labels, 2D map); Lab (guided questions, case files, step-by-step wizard, advanced analytics, anomalies and future, compare); Decide (traffic light, trend, three futures, validation, assistant, passport); Lakes (inventory of 39 lakes, comparison, tools); Ask Killa (this chat); Learn (6 lessons, practice, glossary, quiz); Project.
 NASA DATA SOURCES: NASA POWER (MERRA-2 and CERES: temperature, precipitation, evaporation, radiation, soil moisture, since 1981), NASA GIBS (satellite imagery tiles, Blue Marble, MODIS, VIIRS), EONET (natural events), Earthdata CMR (data search), EPIC (Earth images from DSCOVR), SMAP (soil moisture), FIRMS (fires), SWOT (surface water height and extent), OPERA (surface water products), MODIS, GPM IMERG (precipitation), Landsat and Sentinel-2 (ESA) imagery.
@@ -24,7 +24,7 @@ const FAQ = [
   [/mann|kendall|p.?value|valor p|significan/i, 'The Mann-Kendall test asks whether values tend to rise or fall over time more than chance would explain. A p-value below 0.05 means the pattern is unlikely to be chance.', 'La prueba de Mann-Kendall pregunta si los valores tienden a subir o bajar en el tiempo más de lo que explicaría el azar. Un valor p menor a 0.05 indica que el patrón difícilmente es casualidad.'],
   [/sen|slope|pendiente/i, 'Sen’s slope is a robust way to measure how fast something changes per decade: it takes the median of all pair-wise slopes, so single odd years do not distort it.', 'La pendiente de Sen mide qué tan rápido cambia algo por década. Usa la mediana de todas las pendientes entre pares de años, así los años raros no la distorsionan.'],
   [/sem[aá]foro|traffic/i, 'The traffic light summarises the risk from 0 to 100: calm (green), watch (amber) or alert (red). It combines how far the last 12 months are from normal, the trend and the chance of a dry year, plus how confident the result is.', 'El semáforo resume el riesgo de 0 a 100: tranquilo (verde), vigilar (ámbar) o alerta (rojo). Combina qué tan lejos están los últimos 12 meses de lo normal, la tendencia y la probabilidad de un año seco, además de la confianza.'],
-  [/team|equipo|innovators|qui[eé]n(es)? (hizo|cre)/i, 'TerraScope was built by team The Innovators (Yeferson Dariun Laura Livise and Flor Melany Yanarico Huanca), from Puno, Peru.', 'TerraScope fue creada por el equipo The Innovators (Yeferson Dariun Laura Livise y Flor Melany Yanarico Huanca), de Puno, Perú.'],
+  [/team|equipo|innovators|qui[eé]n(es)? (hizo|cre)/i, 'TerraScope was built by team The Innovators YF (Yeferson Dariun Laura Livise and Flor Melany Yanarico Huanca), from Puno, Peru.', 'TerraScope fue creada por el equipo The Innovators YF (Yeferson Dariun Laura Livise y Flor Melany Yanarico Huanca), de Puno, Perú.'],
   [/what.*(app|software|this)|qu[eé] (es|hace)|how.*(use|work)|c[oó]mo (se )?(usa|funciona)/i, 'TerraScope reads NASA satellite data for a place, tells you whether its climate or water is really changing, shows a traffic light and three possible futures, and explains everything in plain words. Start in Decide, pick Lake Titicaca and press Ask the assistant.', 'TerraScope lee datos satelitales de la NASA de un lugar, te dice si su clima o agua realmente cambia, muestra un semáforo y tres futuros posibles, y lo explica en palabras simples. Empieza en Decidir, elige el Lago Titicaca y pulsa Preguntar al asistente.'],
 ];
 const CHIPS = [
@@ -32,10 +32,10 @@ const CHIPS = [
   ['Is this the real lake level?', '¿Es el nivel real del lago?'], ['Which NASA satellites help with water?', '¿Qué satélites de la NASA ayudan con el agua?'], ['Who made this?', '¿Quién la hizo?'],
 ];
 export default function Ask() {
-  const { lang } = useT(), L = (a, b) => (lang === 'es' ? a : b), [msgs, setMsgs] = useState([]), [txt, setTxt] = useState(''), [busy, setBusy] = useState(false), box = useRef(null);
-  useEffect(() => { setMsgs([{ me: false, text: L('Hi! I am Killa. Ask me anything about NASA, its satellites and data, climate, or how to use this app.', '¡Hola! Soy Killa. Pregúntame lo que quieras sobre la NASA, sus satélites y datos, el clima o cómo usar esta app.') }]); }, [lang]); // eslint-disable-line
+  const { lang } = useT(), L = (a, b) => (lang === 'es' ? a : b), E = (en, es) => (lang === 'es' ? es : en), [msgs, setMsgs] = useState([]), [txt, setTxt] = useState(''), [busy, setBusy] = useState(false), box = useRef(null);
+  useEffect(() => { setMsgs([{ me: false, text: E('Hi! I am Killa. Ask me anything about NASA, its satellites and data, climate, or how to use this app.', '¡Hola! Soy Killa. Pregúntame lo que quieras sobre la NASA, sus satélites y datos, el clima o cómo usar esta app.') }]); }, [lang]); // eslint-disable-line
   useEffect(() => { const el = box.current; if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }); }, [msgs, busy]);
-  const local = (q) => { const f = FAQ.find(([r]) => r.test(q)); return f ? L(f[1], f[2]) : L('I could not reach the online AI right now, and I do not have a stored answer for that. Try “What does this app do?” or “What is NASA POWER?”, or ask again in a moment.', 'No pude conectar con la IA en línea y no tengo una respuesta guardada para eso. Prueba “¿Qué hace esta app?” o “¿Qué es NASA POWER?”, o vuelve a preguntar en un momento.'); };
+  const local = (q) => { const f = FAQ.find(([r]) => r.test(q)); return f ? E(f[1], f[2]) : E('I could not reach the online AI right now, and I do not have a stored answer for that. Try “What does this app do?” or “What is NASA POWER?”, or ask again in a moment.', 'No pude conectar con la IA en línea y no tengo una respuesta guardada para eso. Prueba “¿Qué hace esta app?” o “¿Qué es NASA POWER?”, o vuelve a preguntar en un momento.'); };
   const send = async (q) => {
     q = (q ?? txt).trim(); if (!q || busy) return; setTxt(''); const hist = msgs; setMsgs((m) => [...m, { me: true, text: q }]); setBusy(true);
     const cfg = getCfg();
@@ -56,9 +56,9 @@ export default function Ask() {
             {msgs.map((m, i) => <motion.div key={i} className={'msg' + (m.me ? ' me' : '')} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>{!m.me && <span className="msg-av"><Killa estado={m.ai ? 'idea' : 'bienvenida'} size={38} live={false} shadow={false} tap={false} /></span>}<div className="msg-b"><Rich text={m.text} /></div></motion.div>)}
             {busy && <div className="msg typing"><span className="msg-av"><Killa estado="pensando" size={38} shadow={false} tap={false} /></span><i /><i /><i /></div>}
           </div>
-          <div className="chat-chips">{CHIPS.map((c) => <button key={c[0]} onClick={() => send(L(c[0], c[1]))}>{L(c[0], c[1])}</button>)}</div>
+          <div className="chat-chips">{CHIPS.map((c) => <button key={c[0]} onClick={() => send(E(c[0], c[1]))}>{E(c[0], c[1])}</button>)}</div>
           <form className="chat-in" onSubmit={(e) => { e.preventDefault(); send(); }}>
-            <TextInput value={txt} onChange={(e) => setTxt(e.currentTarget.value)} placeholder={L('Type your question…', 'Escribe tu pregunta…')} size="md" aria-label="Question" style={{ flex: 1 }} />
+            <TextInput value={txt} onChange={(e) => setTxt(e.currentTarget.value)} placeholder={E('Type your question…', 'Escribe tu pregunta…')} size="md" aria-label="Question" style={{ flex: 1 }} />
             <Button type="submit" color="forest" size="md" aria-label="Send"><IconSend size={18} /></Button>
           </form>
         </motion.div>

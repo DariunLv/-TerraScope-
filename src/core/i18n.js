@@ -2,7 +2,7 @@ import { useStore } from './store';
 import X from './i18n2';
 const D = {
   es: {
-    brand: 'Detectives de Tendencias', team: 'The Innovators · Puno, Perú',
+    brand: 'Detectives de Tendencias', team: 'The Innovators YF · Puno, Perú',
     nav: ['Planeta', 'Mapa', 'Casos', 'Laboratorio', 'Aprende', 'Datos', 'Brechas'],
     heroKicker: 'Sé un detective de tendencias del sistema Tierra',
     heroTitle: '¿Está cambiando el clima de tu lugar? Averígualo como un detective.',
@@ -43,7 +43,7 @@ const D = {
     disclaimer: 'POWER es un modelo de reanálisis a ~50 km: sirve para detectar tendencias, no reemplaza estaciones locales, sobre todo en montañas.',
   },
   en: {
-    brand: 'Trend Detectives', team: 'The Innovators · Puno, Peru',
+    brand: 'Trend Detectives', team: 'The Innovators YF · Puno, Peru',
     nav: ['Planet', 'Map', 'Cases', 'Lab', 'Learn', 'Data', 'Gaps'],
     heroKicker: 'Be an Earth System Trend Detective',
     heroTitle: 'Is the climate where you live changing? Find out like a detective.',

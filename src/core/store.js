@@ -8,8 +8,6 @@ export const useStore = create((set) => ({
   sec: null, secN: 0,
   goSec: (view, sec) => { set((s) => ({ view, sec: view + ':' + sec, secN: s.secN + 1 })); },
   setSec: (sec) => set({ sec }),
-  want3d: null, anInit: null,
-  open3D: (kind) => { set({ view: 'lab', want3d: { kind, n: Date.now() }, anInit: kind === 'surface' ? 'seas' : null }); try { window.scrollTo(0, 0); } catch { /* sin scroll */ } },
   setView: (view) => { set({ view }); try { window.scrollTo({ top: 0, behavior: 'instant' }); } catch { window.scrollTo(0, 0); } },
   practice: false, // true = usar siempre datos de práctica (sin internet)
   setPractice: (practice) => set({ practice }),

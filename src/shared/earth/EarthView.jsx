@@ -87,7 +87,7 @@ export default function EarthView({ mode = 'hero', points, uncovered, alerts }) 
     const flyCountry = (c) => { const [[w, s], [e, n]] = c.b, pad = 0.15 * Math.max(1, Math.abs(n - s)); spin.current = false; setSpinOn(false); v.camera.flyTo({ destination: C.Rectangle.fromDegrees(w - pad, Math.max(-85, s - pad), e + pad, Math.min(85, n + pad)), duration: 1.6 }); };
     v.paintCountry = (c, fl) => { paint('cty', c, '#facc15', 0.22, 2.5); setCountry(c || null); if (fl && c) flyCountry(c); };
     const stop = () => { spin.current = false; setSpinOn(false); }; const cv = sc.canvas;
-    cv.addEventListener('pointerdown', stop); cv.addEventListener('wheel', stop, { passive: true });
+    let idle = 0; cv.addEventListener('pointerdown', () => { stop(); clearTimeout(idle); }); if (mode === 'hero') cv.addEventListener('pointerup', () => { clearTimeout(idle); idle = setTimeout(() => { spin.current = true; setSpinOn(true); }, 7000); }); cv.addEventListener('wheel', stop, { passive: true });
     const off = v.clock.onTick.addEventListener(() => { if (spin.current) { v.camera.rotate(C.Cartesian3.UNIT_Z, -0.0011); sc.requestRender(); } });
     const h = new C.ScreenSpaceEventHandler(cv);
     h.setInputAction((e) => {
@@ -100,6 +100,11 @@ export default function EarthView({ mode = 'hero', points, uncovered, alerts }) 
       const g = C.Cartographic.fromCartesian(c); skipFly.current = true;
       const la = +C.Math.toDegrees(g.latitude).toFixed(3), lo = +C.Math.toDegrees(g.longitude).toFixed(3), ct = countryAt(lo, la);
       v.paintCountry(ct, false);
+      if (mode === 'hero') { /* gira el planeta hasta el punto tocado y lanza una onda */
+        const t0 = performance.now(), ring = v.entities.add({ position: C.Cartesian3.fromDegrees(lo, la), point: { pixelSize: new C.CallbackProperty(() => 8 + ((performance.now() - t0) / 1600) * 70, false), color: C.Color.TRANSPARENT, outlineColor: new C.CallbackProperty(() => C.Color.fromCssColorString('#5eead4').withAlpha(Math.max(0, 1 - (performance.now() - t0) / 1600)), false), outlineWidth: 3 } });
+        setTimeout(() => v.entities.remove(ring), 1700); sc.requestRender();
+        v.camera.flyTo({ destination: C.Cartesian3.fromDegrees(lo, la, Math.min(v.camera.positionCartographic.height, 6.5e6)), duration: 1.4 });
+      }
       useStore.getState().setPlace({ id: 'custom', lat: la, lon: lo });
     }, C.ScreenSpaceEventType.LEFT_CLICK);
     h.setInputAction((e) => { const c = v.camera.pickEllipsoid(e.position, sc.globe.ellipsoid); if (!c) return; const g = C.Cartographic.fromCartesian(c), ct = countryAt(C.Math.toDegrees(g.longitude), C.Math.toDegrees(g.latitude)); if (ct) v.paintCountry(ct, true); }, C.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
@@ -230,8 +235,8 @@ export default function EarthView({ mode = 'hero', points, uncovered, alerts }) 
           <span className="splitlab" style={{ left: 12 }}>{year2}</span><span className="splitlab" style={{ right: 60 }}>{year}</span>
         </>)}
         <div className="gzoom"><button onClick={() => zoom(0.5)} aria-label="zoom in"><IconPlus size={18} /></button><button onClick={() => zoom(2)} aria-label="zoom out"><IconMinus size={18} /></button><button onClick={home} aria-label="home"><IconWorld size={18} /></button><button className={labelsOn ? 'on' : ''} onClick={() => setLabelsOn((x) => !x)} aria-label={L('Nombres de países', 'Country names')} title={L('Nombres de países', 'Country names')}><IconTags size={18} /></button><button onClick={photo} aria-label={L('Tomar foto del planeta', 'Take a photo of the planet')} title={L('Tomar foto del planeta (PNG)', 'Take a photo of the planet (PNG)')}><IconCamera size={18} /></button><button className={spinOn ? 'on' : ''} onClick={() => { spin.current = !spin.current; setSpinOn(spin.current); }} aria-label={L('Girar solo', 'Auto-rotate')} title={L('Girar solo', 'Auto-rotate')}><IconRotate360 size={18} /></button></div>
-        {mode === 'explore' && (
-          <div className="earthfly"><span><IconFlag size={13} /> {L('Volar a', 'Fly to')}</span>
+        {(mode === 'explore' || mode === 'hero') && (
+          <div className={'earthfly' + (mode === 'hero' ? ' earthfly-hero' : '')}><span><IconFlag size={13} /> {L('Volar a', 'Fly to')}</span>
             {[['Titicaca', -69.35, -15.85, 4.5e5], ['Amazon', -62, -4, 2.2e6], ['Himalaya', 86, 28, 1.6e6], ['Sahara', 10, 24, 2.4e6], ['Great Barrier Reef', 147, -18, 1.6e6], ['Alps', 9, 46.5, 9e5], ['Aral Sea', 60, 45, 1.1e6], ['Greenland', -42, 72, 2.4e6]].map(([n, lo, la, h]) => <button key={n} onClick={() => flyTo(lo, la, h)}>{n}</button>)}
             <button className={tilt ? 'on' : ''} onClick={toggleTilt}><IconRotate360 size={13} /> {tilt ? L('Vista cenital', 'Top view') : L('Inclinar 3D', '3D tilt')}</button>
           </div>)}

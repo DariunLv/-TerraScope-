@@ -17,6 +17,7 @@ import { PlotView, EChart, olsBand } from '../../shared/charts/hooks';
 import Earth from '../../shared/earth/Earth';
 import CountUp from '../../ui/CountUp';
 const P = lazy(() => import('../../shared/charts/Plotly'));
+import { LakeLab } from './LakeLab';
 const Wait = () => <div style={{ padding: 30, textAlign: 'center' }}><Loader size="sm" color="forest" /></div>;
 const cdf = (x, m, s) => { const z = (x - m) / (s * Math.SQRT2), t = 1 / (1 + 0.3275911 * Math.abs(z)), e = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-z * z); return 0.5 * (1 + (z >= 0 ? e : -e)); };
 const pdf = (x, m, s) => Math.exp(-0.5 * ((x - m) / s) ** 2) / (s * Math.sqrt(2 * Math.PI));
@@ -131,7 +132,7 @@ function Classifier({ L, lang }) {
 export default function Lakes() {
   const { lang } = useT(); const L = (a, b) => (lang === 'es' ? a : b); const pal = usePal();
   const { lake, setLake, openCase, lakes: LAKES } = useStore();
-  const [tab, setTab] = useState('inv'); const [one, setOne] = useState('bal'); const [points, setPoints] = useState(SAMPLE_POINTS); const [custom, setCustom] = useState(''); const [radius, setRadius] = useState(60); const [watch, setWatch] = useState(null);
+  const [tab, setTab] = useState('inv'); const [one, setOne] = useState('lab'); const [points, setPoints] = useState(SAMPLE_POINTS); const [custom, setCustom] = useState(''); const [radius, setRadius] = useState(60); const [watch, setWatch] = useState(null);
   const cur = LAKES.find((l) => l.id === lake) || LAKES[0];
   const stats = useMemo(() => {
     const d = LAKES.map((l) => ({ ...l, d: Math.min(...points.map((p) => km(l, p))) })), unc = d.filter((x) => x.d > radius), srt = d.map((x) => x.d).sort((a, b) => a - b);
@@ -140,7 +141,7 @@ export default function Lakes() {
   const uncovered = useMemo(() => (tab === 'cov' ? new Set(stats.unc.map((l) => l.id)) : null), [tab, stats]);
   const alerts = useMemo(() => (tab === 'watch' && watch ? new Map(watch.list.map((o) => [o.id, { color: LEVELS[o.level][2], text: `${LEVELS[o.level][lang === 'es' ? 0 : 1]} · ${o.zw > 0 ? '+' : ''}${o.zw.toFixed(1)} σ / ${o.zt > 0 ? '+' : ''}${o.zt.toFixed(1)} σ` }])) : null), [tab, watch, lang]);
   const near = stats.d.find((x) => x.id === cur.id);
-  const ONE = [['bal', IconScale, L('Balance de agua y escenarios', 'Water balance and scenarios')], ['sat', IconSatellite, L('Satélites que lo observan', 'Satellites watching it')], ['rep', IconMessageReport, L('Reportes ciudadanos', 'Citizen reports')]];
+  const ONE = [['lab', IconRipple, L('Novedades del lago', 'Lake lab')], ['bal', IconScale, L('Balance de agua y escenarios', 'Water balance and scenarios')], ['sat', IconSatellite, L('Satélites que lo observan', 'Satellites watching it')], ['rep', IconMessageReport, L('Reportes ciudadanos', 'Citizen reports')]];
   const T = [['inv', IconDatabase, L('Inventario', 'Inventory')], ['watch', IconRadar2, L('Vigía de anomalías', 'Anomaly watch')], ['alt', IconMountain, L('Altitud y tendencia', 'Altitude & trend')], ['cov', IconMapPins, L('Cobertura de monitoreo', 'Monitoring coverage')], ['clf', IconDropletSearch, L('Clasificación del agua', 'Water classification')]];
   return (
     <section id="lagos"><div className="wrap">
@@ -171,6 +172,7 @@ export default function Lakes() {
         <h3>{L('Este lago', 'This lake')}: {cur.name}</h3>
         <div className="subtabs">{ONE.map(([v, I, l]) => <button key={v} className={one === v ? 'on' : ''} onClick={() => setOne(v)}><I size={15} />{l}</button>)}</div>
         <div style={{ paddingTop: 14 }}>
+          {one === 'lab' && <LakeLab lake={cur} L={L} lang={lang} />}
           {one === 'bal' && <Balance lake={cur} L={L} lang={lang} />}
           {one === 'sat' && <Satellites lake={cur} L={L} lang={lang} />}
           {one === 'rep' && <Reports lake={cur} L={L} lang={lang} />}
