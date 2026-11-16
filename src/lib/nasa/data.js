@@ -1,71 +1,21 @@
 /* Catálogo, acceso a NASA POWER y datos simulados (ESM). */
 import { useStore } from '../../core/store';
 
-  var V = {
-    T2M: { u: '°C', d: 2, rel: false, es: ['Temperatura del aire (2 m)', 'Qué tan cálido está el aire cerca del suelo.'], en: ['Air temperature (2 m)', 'How warm the air is near the ground.'] },
-    T2M_MAX: { u: '°C', d: 2, rel: false, es: ['Temperatura máxima diaria', 'Promedio mensual de la temperatura más alta de cada día.'], en: ['Daily maximum temperature', 'Monthly average of each day’s highest temperature.'] },
-    T2M_MIN: { u: '°C', d: 2, rel: false, es: ['Temperatura mínima diaria', 'Promedio mensual de la temperatura más baja de cada día.'], en: ['Daily minimum temperature', 'Monthly average of each day’s lowest temperature.'] },
-    T2MDEW: { u: '°C', d: 2, rel: false, es: ['Punto de rocío', 'Temperatura a la que el aire se satura de vapor. Refleja cuánta humedad hay.'], en: ['Dew point', 'Temperature at which the air saturates. It reflects how much moisture there is.'] },
-    TS: { u: '°C', d: 2, rel: false, es: ['Temperatura de la superficie', 'Temperatura del suelo, el hielo o el mar en la superficie.'], en: ['Surface skin temperature', 'Temperature of the ground, ice or sea surface.'] },
-    RH2M: { u: '%', d: 1, rel: true, es: ['Humedad relativa', 'Porcentaje de vapor de agua del aire respecto al máximo posible.'], en: ['Relative humidity', 'Share of the water vapor the air could hold.'] },
-    QV2M: { u: 'g/kg', d: 2, rel: true, es: ['Humedad específica', 'Gramos de vapor de agua por kilogramo de aire.'], en: ['Specific humidity', 'Grams of water vapor per kilogram of air.'] },
-    PRECTOTCORR: { u: 'mm/día', d: 2, rel: true, es: ['Precipitación', 'Lluvia o nieve caída, expresada en milímetros por día.'], en: ['Precipitation', 'Rain or snow, in millimeters per day.'] },
-    EVLAND: { u: 'mm/día', d: 2, rel: true, es: ['Evaporación', 'Agua que pasa del suelo y las plantas al aire. Si sube y la lluvia no, el lugar se seca.'], en: ['Evaporation', 'Water moving from soil and plants to the air. If it rises and rain does not, the place dries.'] },
-    PS: { u: 'kPa', d: 2, rel: false, es: ['Presión en superficie', 'Peso del aire sobre el lugar.'], en: ['Surface pressure', 'Weight of the air above the place.'] },
-    WS10M: { u: 'm/s', d: 2, rel: true, es: ['Velocidad del viento (10 m)', 'Qué tan rápido sopla el viento a 10 metros de altura.'], en: ['Wind speed (10 m)', 'How fast the wind blows at 10 meters.'] },
-    ALLSKY_SFC_SW_DWN: { u: 'kW·h/m²/día', d: 2, rel: true, es: ['Radiación solar en superficie', 'Energía solar que llega al suelo, con las nubes reales.'], en: ['Surface solar radiation', 'Solar energy reaching the ground, with real clouds.'] },
-    CLOUD_AMT: { u: '%', d: 1, rel: true, es: ['Nubosidad', 'Porcentaje del cielo cubierto por nubes.'], en: ['Cloud amount', 'Share of the sky covered by clouds.'] },
-    GWETTOP: { u: '', d: 3, rel: true, es: ['Humedad del suelo (superficie)', 'Qué tan mojada está la capa superior del suelo. 0 es seco y 1 saturado.'], en: ['Surface soil wetness', 'How wet the top soil layer is. 0 is dry, 1 is saturated.'] },
-    GWETROOT: { u: '', d: 3, rel: true, es: ['Humedad de la zona de raíces', 'Agua disponible para las plantas en la zona de raíces.'], en: ['Root zone soil wetness', 'Water available to plants in the root zone.'] },
-    GWETPROF: { u: '', d: 3, rel: true, es: ['Humedad del perfil del suelo', 'Humedad del suelo en toda su profundidad.'], en: ['Soil profile wetness', 'Wetness of the soil through its full depth.'] }
-  };
-  V.CSV = { u: '', d: 3, rel: true, es: ['Serie subida (CSV)', 'Tu propia serie de Giovanni, AppEEARS, CDO o KNMI.'], en: ['Uploaded series (CSV)', 'Your own series from Giovanni, AppEEARS, CDO or KNMI.'] };
-  var KEYS = Object.keys(V).filter(function (k) { return k !== 'CSV'; });
+import { VARIABLES, KEYS, PLACES } from './catalog.js';
+import { readCsv, csvNumber, normalizeHeader, MAX_MONTHS } from '../data/csv.js';
+const V = Object.fromEntries(Object.entries(VARIABLES).map(([key, variable]) => [key, { ...variable }]));
 
-  var PLACES = [
-    { id: 'moq', es: 'Moquegua, Perú', en: 'Moquegua, Peru', lat: -17.19, lon: -70.93, b: 'mountain' },
-    { id: 'ama', es: 'Amazonía peruana', en: 'Peruvian Amazon', lat: -3.75, lon: -73.25, b: 'forest' },
-    { id: 'ata', es: 'Desierto de Atacama', en: 'Atacama Desert', lat: -24.5, lon: -69.25, b: 'desert' },
-    { id: 'art', es: 'Ártico (Svalbard)', en: 'Arctic (Svalbard)', lat: 78.2, lon: 15.6, b: 'polar' },
-    { id: 'sah', es: 'Sahel (Níger)', en: 'Sahel (Niger)', lat: 14.0, lon: 2.0, b: 'desert' },
-    { id: 'him', es: 'Himalaya (Nepal)', en: 'Himalaya (Nepal)', lat: 28.0, lon: 84.0, b: 'mountain' },
-    { id: 'mex', es: 'Ciudad de México', en: 'Mexico City', lat: 19.43, lon: -99.13, b: 'city' },
-    { id: 'med', es: 'Mar Mediterráneo', en: 'Mediterranean Sea', lat: 35.0, lon: 18.0, b: 'coast' },
-    { id: 'lim', es: 'Lima, Perú', en: 'Lima, Peru', lat: -12.05, lon: -77.04, b: 'city' },
-    { id: 'tit', es: 'Lago Titicaca', en: 'Lake Titicaca', lat: -15.8, lon: -69.4, b: 'mountain' },
-    { id: 'cus', es: 'Cusco, Perú', en: 'Cusco, Peru', lat: -13.53, lon: -71.97, b: 'mountain' },
-    { id: 'piu', es: 'Piura, Perú', en: 'Piura, Peru', lat: -5.19, lon: -80.63, b: 'coast' },
-    { id: 'nyc', es: 'Nueva York', en: 'New York', lat: 40.71, lon: -74.0, b: 'city' },
-    { id: 'cal', es: 'California (Valle Central)', en: 'California (Central Valley)', lat: 36.7, lon: -119.8, b: 'desert' },
-    { id: 'gro', es: 'Groenlandia', en: 'Greenland', lat: 72.0, lon: -40.0, b: 'polar' },
-    { id: 'sib', es: 'Siberia (Yakutsk)', en: 'Siberia (Yakutsk)', lat: 62.03, lon: 129.73, b: 'polar' },
-    { id: 'del', es: 'Delhi, India', en: 'Delhi, India', lat: 28.61, lon: 77.21, b: 'city' },
-    { id: 'gan', es: 'Delta del Ganges', en: 'Ganges Delta', lat: 22.5, lon: 89.5, b: 'coast' },
-    { id: 'cer', es: 'Cerrado (Brasil)', en: 'Cerrado (Brazil)', lat: -15.8, lon: -47.9, b: 'forest' },
-    { id: 'con', es: 'Cuenca del Congo', en: 'Congo Basin', lat: 0.0, lon: 22.0, b: 'forest' },
-    { id: 'cap', es: 'Ciudad del Cabo', en: 'Cape Town', lat: -33.92, lon: 18.42, b: 'coast' },
-    { id: 'aus', es: 'Australia (Murray-Darling)', en: 'Australia (Murray-Darling)', lat: -34.0, lon: 144.0, b: 'desert' },
-    { id: 'ant', es: 'Península Antártica', en: 'Antarctic Peninsula', lat: -64.8, lon: -62.9, b: 'polar' },
-    { id: 'mad', es: 'Madrid, España', en: 'Madrid, Spain', lat: 40.42, lon: -3.7, b: 'city' },
-    { id: 'nil', es: 'Delta del Nilo', en: 'Nile Delta', lat: 31.0, lon: 31.0, b: 'coast' },
-    { id: 'mek', es: 'Delta del Mekong', en: 'Mekong Delta', lat: 10.5, lon: 105.5, b: 'coast' },
-    { id: 'tok', es: 'Tokio, Japón', en: 'Tokyo, Japan', lat: 35.68, lon: 139.69, b: 'city' },
-    { id: 'yel', es: 'Canadá (Yellowknife)', en: 'Canada (Yellowknife)', lat: 62.45, lon: -114.37, b: 'polar' },
-    { id: 'alp', es: 'Alpes', en: 'Alps', lat: 46.5, lon: 9.8, b: 'mountain' },
-    { id: 'bor', es: 'Borneo', en: 'Borneo', lat: 0.5, lon: 114.0, b: 'forest' }
-  ];
+  function cacheGet(k) { try { const entry = JSON.parse(sessionStorage.getItem(k)); return entry?.version === 2 && Date.now() - entry.t < 3600000 ? entry.value : null; } catch { return null; } }
+  function cacheSet(k, value) { try { sessionStorage.setItem(k, JSON.stringify({ version: 2, t: Date.now(), value })); } catch { /* sin caché */ } }
 
-  function cacheGet(k) { try { return JSON.parse(sessionStorage.getItem(k)); } catch (e) { return null; } }
-  function cacheSet(k, v) { try { sessionStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* sin caché */ } }
-
-  function parsePower(json, keys) {
+  function parsePower(json, keys, year0 = 1, year1 = 9999) {
     var par = json && json.properties && json.properties.parameter, out = {};
     if (!par) return out;
     keys.forEach(function (k) {
       var o = par[k]; if (!o) return; var pts = [];
       Object.keys(o).sort().forEach(function (ym) {
-        if (ym.length !== 6) return; var m = +ym.slice(4), y = +ym.slice(0, 4), v = o[ym];
-        if (m < 1 || m > 12 || v == null || v <= -990) return;
+        if (!/^\d{6}$/.test(ym)) return; var m = +ym.slice(4), y = +ym.slice(0, 4), v = o[ym];
+        if (y < year0 || y > year1 || m < 1 || m > 12 || !Number.isFinite(v) || v <= -990) return;
         pts.push({ year: y, month: m - 1, x: y + (m - 1) / 12, v: v });
       });
       if (pts.length) out[k] = pts;
@@ -78,29 +28,37 @@ import { useStore } from '../../core/store';
       '&community=AG&longitude=' + lon.toFixed(4) + '&latitude=' + lat.toFixed(4) + '&start=' + y0 + '&end=' + y1 + '&format=JSON';
   }
 
-  async function fetchJson(url) {
-    var c = cacheGet(url); if (c) return c;
+  async function fetchJson(url, { signal, refresh = false } = {}) {
+    signal?.throwIfAborted();
+    var c = !refresh && cacheGet(url); if (c) return c;
     var ctl = new AbortController(), to = setTimeout(function () { ctl.abort(); }, 45000);
+    const abort = () => ctl.abort(signal.reason); signal?.addEventListener('abort', abort, { once: true });
     try {
       var r = await fetch(url, { signal: ctl.signal });
       if (!r.ok) { var e = new Error('http'); e.status = r.status; throw e; }
       var j = await r.json(); cacheSet(url, j); return j;
-    } finally { clearTimeout(to); }
+    } finally { clearTimeout(to); signal?.removeEventListener('abort', abort); }
   }
 
   /* Pide todas las variables en una sola consulta; si falla, intenta una por una. */
-  async function power(lat, lon, keys, y0, y1, onProgress) {
+  async function power(lat, lon, keys, y0, y1, onProgress, options = {}) {
+    if (onProgress && typeof onProgress === 'object') { options = onProgress; onProgress = null; }
+    if (!Number.isFinite(lat) || Math.abs(lat) > 90 || !Number.isFinite(lon) || Math.abs(lon) > 180 || !Number.isInteger(y0) || !Number.isInteger(y1) || y1 < y0) throw new Error('invalid query');
+    keys = [...new Set(keys)].filter((key) => KEYS.includes(key));
+    if (!keys.length) return {};
+    let out = {};
     try {
-      var out = parsePower(await fetchJson(powerUrl(lat, lon, keys, y0, y1)), keys);
-      if (Object.keys(out).length) return out;
-    } catch (e) { if (keys.length === 1 || !e.status) throw netError(e); }
-    var res = {};
-    for (var i = 0; i < keys.length; i++) {
-      if (onProgress) onProgress(i + 1, keys.length);
-      try { var one = parsePower(await fetchJson(powerUrl(lat, lon, [keys[i]], y0, y1)), [keys[i]]); if (one[keys[i]]) res[keys[i]] = one[keys[i]]; }
-      catch (e) { if (!e.status) throw netError(e); }
+      out = parsePower(await fetchJson(powerUrl(lat, lon, keys, y0, y1), options), keys, y0, y1);
+    } catch (e) { if (e.name === 'AbortError' || keys.length === 1 || !e.status) throw e; }
+    const missing = keys.filter((key) => !out[key]);
+    if (keys.length === 1) return out;
+    for (let i = 0; i < missing.length; i++) {
+      options.signal?.throwIfAborted();
+      onProgress?.(i + 1, missing.length);
+      try { const one = parsePower(await fetchJson(powerUrl(lat, lon, [missing[i]], y0, y1), options), [missing[i]], y0, y1); if (one[missing[i]]) out[missing[i]] = one[missing[i]]; }
+      catch (e) { if (e.name === 'AbortError' || options.signal?.aborted) throw e; }
     }
-    return res;
+    return out;
   }
   function netError(e) { var n = new Error('net'); n.cause = e; return n; }
 
@@ -129,31 +87,39 @@ import { useStore } from '../../core/store';
 
 
 /* Lee CSV de Giovanni/AppEEARS/CDO/KNMI: primera columna fecha, primera columna numérica = valor. Agrega a mensual. */
-function parseCsv(text) {
-  var acc = {};
-  text.split(/\r?\n/).forEach(function (ln) {
-    if (!ln.trim() || /^\s*#/.test(ln)) return;
-    var c = ln.split(/[,;\t]/).map(function (x) { return x.trim().replace(/^"|"$/g, ''); });
-    var w = ln.trim().split(/\s+/);
-    if (/^\d{4}$/.test(w[0]) && w.length >= 13 && !isNaN(parseFloat(w[12]))) { for (var q = 1; q <= 12; q++) { var z = parseFloat(w[q]); if (!isNaN(z) && z > -990) (acc[+w[0] * 12 + q - 1] = acc[+w[0] * 12 + q - 1] || []).push(z); } return; }
-    if (/^\d{4}$/.test(w[0]) && w.length === 3 && +w[1] >= 1 && +w[1] <= 12) { var z2 = parseFloat(w[2]); if (!isNaN(z2) && z2 > -990) (acc[+w[0] * 12 + (+w[1]) - 1] = acc[+w[0] * 12 + (+w[1]) - 1] || []).push(z2); return; }
-    var m = c[0].match(/^(\d{4})[-\/]?(\d{2})/);
-    if (!m) return;
-    var y = +m[1], mo = +m[2]; if (mo < 1 || mo > 12) return;
-    var v = NaN; for (var i = 1; i < c.length; i++) { var n = parseFloat(c[i]); if (!isNaN(n) && !/^\d{4}-/.test(c[i])) { v = n; break; } }
-    if (isNaN(v) || v <= -990) return;
-    var k = y * 12 + (mo - 1); (acc[k] = acc[k] || []).push(v);
-  });
+function parseCsv(text, { valueColumn } = {}) {
+  const rows = readCsv(text), acc = {};
+  const add = (year, month, value) => { if (!Number.isInteger(year) || year < 1 || year > 9999 || !Number.isInteger(month) || month < 1 || month > 12 || !Number.isFinite(value) || value <= -990) return; const key = year * 12 + month - 1; (acc[key] ||= []).push(value); };
+  const header = (rows[0] || []).map(normalizeHeader), yearIndex = header.findIndex((h) => /^(year|anio|ano)$/.test(h)), monthIndex = header.findIndex((h) => /^(month|mes)$/.test(h));
+  const dateIndex = Math.max(0, header.findIndex((h) => /^(date|fecha|time|datetime)$/.test(h)));
+  let valueIndex = valueColumn != null ? header.indexOf(normalizeHeader(valueColumn)) : header.findIndex((h) => /^(value|valor|measurement|medicion)$/.test(h));
+  const hasHeader = yearIndex >= 0 || header.some((h) => /^(date|fecha|time|value|valor|datetime)$/.test(h));
+  if (valueIndex < 0) {
+    const candidates = (rows[hasHeader ? 1 : 0] || []).map((field, index) => ({ index, value: csvNumber(field) })).filter(({ index, value }) => index !== dateIndex && index !== yearIndex && index !== monthIndex && Number.isFinite(value));
+    if (candidates.length > 1) throw new Error('CSV_AMBIGUOUS_VALUE');
+    valueIndex = candidates[0]?.index ?? -1;
+  }
+  for (const row of rows.slice(hasHeader ? 1 : 0)) {
+    if (row.length === 1) {
+      const columns = row[0].split(/\s+/), year = +columns[0];
+      if (/^\d{4}$/.test(columns[0]) && columns.length >= 13) { for (let month = 1; month <= 12; month++) add(year, month, csvNumber(columns[month])); continue; }
+      if (columns.length === 3) { add(year, +columns[1], csvNumber(columns[2])); continue; }
+    }
+    if (yearIndex >= 0 && monthIndex >= 0) add(+row[yearIndex], +row[monthIndex], csvNumber(row[valueIndex]));
+    else { const match = row[dateIndex]?.match(/^(\d{4})[-/]?(\d{2})(?:\D|\d{2}|$)/); if (match) add(+match[1], +match[2], csvNumber(row[valueIndex])); }
+  }
+  if (Object.keys(acc).length > MAX_MONTHS) throw new Error('CSV_TOO_MANY_MONTHS');
   return Object.keys(acc).map(Number).sort(function (a, b) { return a - b; }).map(function (k) {
     var a = acc[k], y = Math.floor(k / 12), mo = k % 12; return { year: y, month: mo, x: y + mo / 12, v: a.reduce(function (s, z) { return s + z; }, 0) / a.length };
   });
 }
 /* Datos diarios de NASA POWER (para la vista de alto rendimiento) */
-async function powerDaily(lat, lon, key, y0, y1) {
+async function powerDaily(lat, lon, key, y0, y1, options = {}) {
+  if (!Number.isFinite(lat) || Math.abs(lat) > 90 || !Number.isFinite(lon) || Math.abs(lon) > 180 || !KEYS.includes(key) || !Number.isInteger(y0) || !Number.isInteger(y1) || y1 < y0) throw new Error('invalid query');
   var url = 'https://power.larc.nasa.gov/api/temporal/daily/point?parameters=' + key + '&community=AG&longitude=' + lon.toFixed(4) + '&latitude=' + lat.toFixed(4) + '&start=' + y0 + '0101&end=' + y1 + '1231&format=JSON';
-  var j = await fetchJson(url), o = j && j.properties && j.properties.parameter && j.properties.parameter[key], out = [];
+  var j = await fetchJson(url, options), o = j && j.properties && j.properties.parameter && j.properties.parameter[key], out = [];
   if (!o) return out;
-  Object.keys(o).sort().forEach(function (d) { var v = o[d]; if (d.length !== 8 || v == null || v <= -990) return; out.push({ t: Date.UTC(+d.slice(0, 4), +d.slice(4, 6) - 1, +d.slice(6, 8)) / 1000, v: v }); });
+  Object.keys(o).sort().forEach(function (d) { var v = o[d]; if (!/^\d{8}$/.test(d) || !Number.isFinite(v) || v <= -990) return; const year = +d.slice(0, 4), month = +d.slice(4, 6), day = +d.slice(6, 8), date = new Date(Date.UTC(year, month - 1, day)); if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return; out.push({ t: date.getTime() / 1000, v }); });
   return out;
 }
 function demoDaily(lat, lon, key, y0, y1) {

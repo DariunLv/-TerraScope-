@@ -3,12 +3,18 @@ import Ghost from '../../ui/Ghost';
 import AutoExplain, { stats as seriesStats } from '../../shared/charts/AutoExplain';
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Button, Chip, RangeSlider, Select, SegmentedControl, Switch, Tooltip, Progress, Alert, Group, Tabs } from '@mantine/core';
-import { IconWorld, IconCrystalBall, IconDownload, IconTrendingUp, IconTrendingDown, IconEqual, IconCheck, IconX, IconSearch, IconUpload, IconMessageQuestion, IconFolders, IconAdjustments, IconGauge, IconChartDots3, IconArrowsLeftRight, IconRadar2, IconFlask } from '@tabler/icons-react';
+import { IconWorld, IconCrystalBall, IconDownload, IconTrendingUp, IconTrendingDown, IconEqual, IconSearch, IconUpload, IconMessageQuestion, IconFolders, IconAdjustments, IconGauge, IconChartDots3, IconArrowsLeftRight, IconRadar2, IconFlask } from '@tabler/icons-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import * as S from '../../lib/analysis/stats';
 import { V, KEYS, PLACES, power, demo, parseCsv, sourceOf } from '../../lib/nasa/data';
-import { pearson } from '../../lib/analysis/viz';
+import { tableFacts } from '../../shared/charts/chartFacts';
+import { monthlyCorrelation } from '../../lib/analysis/viz';
+import { useRequest, aborted } from '../../core/useRequest';
+import { useSessionState } from '../../core/useSessionState';
+import { useRouteState } from '../../core/useRouteState';
+import { runAnalysis } from '../../lib/analysis/run';
+import { csvError, readCsvFile } from '../../lib/data/csv';
 import { useStore, placeLabel } from '../../core/store';
 import { useT } from '../../core/i18n';
 import BrushChart from './BrushChart';
@@ -19,8 +25,8 @@ import Compare from './Compare';
 import Questions from './Questions';
 import CaseFiles from './CaseFiles';
 import Wizard from './Wizard';
+import EvidenceCards from './EvidenceCards';
 import PageHead from '../../layout/PageHead';
-import SpotlightCard from '../../ui/SpotlightCard';
 import CountUp from '../../ui/CountUp';
 const Analytics = lazy(() => import('./Analytics'));
 const Forecast = lazy(() => import('../../shared/analysis/Forecast'));
@@ -33,37 +39,50 @@ const fp = (p) => (p < 0.001 ? '< 0.001' : p.toFixed(3));
 export default function Lab() {
   const { t, lang } = useT(); const L = (a, b) => (lang === 'es' ? a : b);
   const { place, setPlace, job, practice } = useStore();
-  const [start, setStart] = useState('guia');
-  const [vars, setVars] = useState(['T2M', 'PRECTOTCORR', 'GWETROOT']);
-  const [years, setYears] = useState([1981, 2025]); const [ds, setDs] = useState(true);
+  const [start, setStart] = useRouteState('laboratorio', 'guia', (value) => ['guia', 'casos', 'manual'].includes(value));
+  const [vars, setVars] = useSessionState('lab:vars', ['T2M', 'PRECTOTCORR', 'GWETROOT']);
+  const [years, setYears] = useSessionState('lab:years', [1981, new Date().getUTCFullYear() - 1]); const [ds, setDs] = useSessionState('lab:ds', true);
   const sec = useStore((s) => s.sec), secN = useStore((s) => s.secN);
   useEffect(() => { if (sec && sec.startsWith('lab:')) setTab(sec.slice(4)); }, [secN]); // eslint-disable-line
-  const [busy, setBusy] = useState(false); const [res, setRes] = useState(null); const [sel, setSel] = useState(null); const [note, setNote] = useState(''); const [tab, setTab] = useState('resumen'); const [o3, setO3] = useState('none');
+  const [busy, setBusy] = useState(false); const [res, setRes] = useSessionState('lab:result', null); const [sel, setSel] = useSessionState('lab:variable', null); const [note, setNote] = useState(''); const [tab, setTab] = useSessionState('lab:tab', 'resumen'); const [o3, setO3] = useSessionState('lab:3d', 'none');
+  const begin = useRequest([practice]);
   const out = useRef(null);
   const placeData = PLACES.map((p) => ({ value: p.id, label: p[lang] })).concat(place.id === 'custom' ? [{ value: 'custom', label: placeLabel(place, PLACES, lang) }] : []);
   const run = async (o = {}) => {
     const vs = o.vars || vars, pl = o.place || place, yr = o.years || years, dsv = o.ds ?? ds; if (!vs.length) return;
-    setBusy(true); setNote(''); setTab('resumen');
+    const request = begin(); setBusy(true); setNote(''); setTab('resumen');
     setTimeout(() => out.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
-    let data, live = false;
-    if (!useStore.getState().practice) { try { data = await power(pl.lat, pl.lon, vs, yr[0], yr[1]); live = Object.keys(data).length > 0; if (!live) throw new Error('empty'); } catch { setNote(t.liveFail); } }
-    if (!live) data = demo(pl.lat, pl.lon, vs, yr[0], yr[1]);
-    await new Promise((r) => setTimeout(r, 350));
-    const list = [];
-    for (const k of vs) { if (!data[k]) continue; try { list.push({ k, r: S.analyze(data[k], { deseason: dsv }), raw: data[k] }); } catch { /* serie corta */ } }
-    list.sort((a, b) => b.r.count - a.r.count || a.r.p - b.r.p);
-    setRes({ list, live, pl }); setSel(list[0]?.k); setBusy(false);
-    if (list[0]?.r.level === 'strong') setTimeout(() => confetti({ particleCount: 70, spread: 75, origin: { y: 0.6 }, colors: ['#0c5a43', '#1e3a8a', '#34d399', '#f59e0b'] }), 200);
+    try {
+      const live = !useStore.getState().practice;
+      const data = live ? await power(pl.lat, pl.lon, vs, yr[0], yr[1], { signal: request.signal }) : demo(pl.lat, pl.lon, vs, yr[0], yr[1]);
+      const list = await runAnalysis('analyze', { items: vs.filter((k) => data[k]).map((k) => ({ k, points: data[k], source: live ? 'NASA POWER' : 'demo' })), options: { deseason: dsv } }, { signal: request.signal });
+      if (!request.current()) return;
+      if (!list.length) throw new Error('empty');
+      list.sort((a, b) => b.r.count - a.r.count || a.r.p - b.r.p);
+      const missing = vs.filter((k) => !list.some((item) => item.k === k));
+      if (missing.length) setNote(L('Sin datos suficientes para: ', 'Not enough data for: ') + missing.map((k) => V[k][lang][0]).join(', '));
+      setRes({ list, live, pl, years: yr, ds: dsv, job: useStore.getState().job?.n }); setSel(list[0]?.k);
+      if (list[0]?.r.level === 'strong') confetti({ particleCount: 70, spread: 75, origin: { y: 0.6 }, colors: ['#0c5a43', '#1e3a8a', '#34d399', '#f59e0b'] });
+    } catch (error) { if (request.current() && !aborted(error)) setNote(L('No se pudo completar la investigación con datos reales. Reintenta o activa Práctica para usar datos simulados.', 'Could not complete the investigation with real data. Retry or enable Practice to use simulated data.')); }
+    finally { if (request.current()) setBusy(false); }
   };
-  useEffect(() => { if (job) { setVars(job.vars); run({ vars: job.vars, place: useStore.getState().place }); } }, [job?.n]);
+  useEffect(() => { if (job && job.n !== res?.job) { setVars(job.vars); run({ vars: job.vars, place: useStore.getState().place }); } }, [job?.n]);
+  useEffect(() => { setBusy(false); }, [practice]);
   const onCsv = async (e) => {
-    const file = e.target.files?.[0]; if (!file) return; const pts = parseCsv(await file.text());
-    if (pts.length < 24) { setNote(L('El archivo necesita al menos 24 meses con fecha (AAAA-MM) y valor.', 'The file needs at least 24 months with date (YYYY-MM) and value.')); return; }
-    const r = S.analyze(pts, { deseason: ds }); setNote(''); setTab('resumen'); setRes({ list: [{ k: 'CSV', r, raw: pts }], live: true, pl: { id: 'csv', lat: 0, lon: 0, name: file.name } }); setSel('CSV');
-    setTimeout(() => out.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+    const file = e.target.files?.[0]; if (!file) return; const request = begin(); setBusy(true);
+    try {
+      const pts = parseCsv(await readCsvFile(file));
+      if (pts.length < 24) throw new Error('short');
+      const list = await runAnalysis('analyze', { items: [{ k: 'CSV', points: pts, source: 'CSV' }], options: { deseason: ds } }, { signal: request.signal });
+      if (!request.current()) return;
+      if (!list.length) throw new Error('short');
+      setNote(''); setTab('resumen'); setRes({ list, live: true, pl: { id: 'csv', lat: 0, lon: 0, name: file.name }, years: [pts[0].year, pts.at(-1).year], ds }); setSel('CSV');
+      out.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (error) { if (request.current() && !aborted(error)) setNote(error.message === 'short' ? L('El archivo necesita al menos 24 meses con fecha y valor.', 'The file needs at least 24 months with date and value.') : csvError(error, lang)); }
+    finally { if (request.current()) setBusy(false); e.target.value = ''; }
   };
   const cur = res?.list.find((x) => x.k === sel);
-  const csv = () => { if (!cur) return; const rows = ['year,month,value,anomaly', ...cur.raw.map((p, i) => `${p.year},${p.month + 1},${p.v},${cur.r.y[i]}`)]; const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([rows.join('\n')], { type: 'text/csv' })); a.download = `${cur.k}.csv`; a.click(); };
+  const csv = () => { if (!cur) return; const rows = ['year,month,value,anomaly', ...cur.raw.map((p, i) => `${p.year},${p.month + 1},${p.v},${cur.r.y[i]}`)]; const a = document.createElement('a'); const url = URL.createObjectURL(new Blob([rows.join('\n')], { type: 'text/csv' })); a.href = url; a.download = `${cur.k}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 3000); };
   const pname = (pl) => (pl.id === 'csv' ? pl.name : placeLabel(pl, PLACES, lang));
   return (
     <section id="lab"><div className="wrap">
@@ -88,7 +107,7 @@ export default function Lab() {
         {busy && <div className="card panel scan"><div className="scanline" /><p className="sub" style={{ margin: '0 auto' }}>{t.running}</p></div>}
         {note && !busy && <Alert mb="sm" color="orange" radius="lg">{note}</Alert>}
         {res && cur && !busy && (
-          <motion.div key={res.pl.lat + '_' + res.list.length + res.live} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}>
+          <motion.div data-analysis-context={JSON.stringify({ place: pname(res.pl), source: res.pl.id === 'csv' ? 'uploaded CSV; measurement method not verified' : res.live ? 'NASA POWER climate model, not measured lake level' : 'simulated practice data, not real measurements', observedPeriod: [`${cur.raw[0].year}-${cur.raw[0].month + 1}`, `${cur.raw.at(-1).year}-${cur.raw.at(-1).month + 1}`], variables: res.list.map(({ k }) => ({ name: V[k][lang][0], unit: V[k].u })), selectedVariable: V[cur.k][lang][0], note: 'Variable units describe the input series; derived indicators may be dimensionless as stated by each chart.' })} key={res.pl.lat + '_' + res.list.length + res.live} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}>
             {!res.live && !note && <Alert mb="sm" color="blue" radius="lg">{L('Modo práctica: datos simulados. Apaga “Práctica” en la barra superior para usar NASA POWER.', 'Practice mode: simulated data. Turn off “Practice” in the top bar to use NASA POWER.')}</Alert>}
             <div className="glass verdict">
               <div className="vbadge" style={{ background: COL[cur.r.level] }}>{cur.r.level === 'none' ? <IconEqual /> : cur.r.dir > 0 ? <IconTrendingUp /> : <IconTrendingDown />}</div>
@@ -122,18 +141,7 @@ export default function Lab() {
                 <Tabs.Panel value="resumen" pt="md">
                   <BrushChart r={cur.r} unit={V[cur.k].u} dec={V[cur.k].d} />
                   <Interpret title={`${V[cur.k][lang][0]} (${V[cur.k].u})`} facts={`${V[cur.k][lang][0]} en ${pname(res.pl)}; ${cur.r.n} datos de ${Math.round(cur.r.x[0])} a ${Math.round(cur.r.x[cur.r.n - 1])}; cambio estimado ${fmt(cur.r.sen.slope * 10, V[cur.k].d)} ${V[cur.k].u} por década; intervalo 95% [${fmt(cur.r.sen.ci[0] * 10, V[cur.k].d)}, ${fmt(cur.r.sen.ci[1] * 10, V[cur.k].d)}]; pruebas: ${cur.r.tests.map((x) => t.testNames[x.id] + ' p=' + (isNaN(x.p) ? 'n/d' : x.p.toFixed(4)) + (x.sig ? ' (significativa)' : ' (no significativa)')).join(', ')}; autocorrelación ${cur.r.tfpw.r1.toFixed(2)}`} how={L('Cómo se lee: cada punto es un mes; la línea es la tendencia. Arrastra la franja de abajo para mirar otro periodo.', 'How to read it: each dot is a month; the line is the trend. Drag the lower strip to look at another period.')} plain={cur.r.tests.some((x) => x.sig) ? L('Qué dice aquí: al menos una prueba estadística indica que el cambio es real y no azar.', 'What it says here: at least one statistical test indicates the change is real, not chance.') : L('Qué dice aquí: ninguna prueba muestra un cambio claro; puede ser solo variación natural.', 'What it says here: no test shows a clear change; it may be natural variation.')} next={L('Cambia el periodo con la franja inferior y mira si la tendencia se mantiene; luego abre Análisis avanzado.', 'Change the period with the bottom strip and see whether the trend holds; then open Advanced analysis.')} />
-                  <div className="tests">
-                    {cur.r.tests.map((x) => (
-                      <SpotlightCard key={x.id} theme="light" className="test">
-                        <div className="row" style={{ justifyContent: 'space-between', flexWrap: 'nowrap' }}><b style={{ fontSize: 14 }}>{t.testNames[x.id]}</b>{x.sig ? <IconCheck color="#0c5a43" /> : <IconX color="#868e96" />}</div>
-                        <div style={{ fontSize: 24, fontWeight: 800, color: x.sig ? '#0c5a43' : '#868e96' }}>{isNaN(x.p) ? '—' : fp(x.p)}</div>
-                        <div className="mini">{t.pval} · {x.sig ? t.agrees : t.noAgree}</div>
-                      </SpotlightCard>
-                    ))}
-                    <SpotlightCard theme="light" className="test"><b style={{ fontSize: 14 }}>{t.ci}</b><div style={{ fontSize: 18, fontWeight: 800, marginTop: 4 }}>[{fmt(cur.r.sen.ci[0] * 10, V[cur.k].d)}, {fmt(cur.r.sen.ci[1] * 10, V[cur.k].d)}]</div><div className="mini">{V[cur.k].u} {t.per} · {cur.r.sen.ci[0] * cur.r.sen.ci[1] > 0 ? L('no incluye 0', 'excludes 0') : L('incluye 0', 'includes 0')}</div></SpotlightCard>
-                    <SpotlightCard theme="light" className="test"><b style={{ fontSize: 14 }}>{t.change}</b><div className="mini" style={{ marginTop: 4 }}>{cur.r.pettitt?.sig ? t.changeText(cur.r.pettitt.year, cur.r.pettitt.before.toFixed(V[cur.k].d), cur.r.pettitt.after.toFixed(V[cur.k].d), V[cur.k].u) : t.noChange}</div></SpotlightCard>
-                    <SpotlightCard theme="light" className="test"><b style={{ fontSize: 14 }}>{t.autocorr}</b><div style={{ fontSize: 20, fontWeight: 800 }}>{cur.r.tfpw.r1.toFixed(2)}</div><div className="mini">{cur.r.tfpw.applied ? t.autoApplied : t.autoOk}</div></SpotlightCard>
-                  </div>
+                  <EvidenceCards result={cur.r} variable={V[cur.k]} t={t} lang={lang} />
                   <p className="mini">{t.pHelp} {t.ciHelp}</p>
                   <div className="row" style={{ justifyContent: 'space-between' }}><span className="mini">{t.disclaimer}</span><button className="textlink" onClick={csv}><IconDownload size={14} /> {t.exportCsv}</button></div>
                 </Tabs.Panel>
@@ -146,13 +154,13 @@ export default function Lab() {
                     <LinkedCharts list={res.list} />
                     <AutoExplain title={L('Todas tus variables con zoom sincronizado', 'All your variables with synchronized zoom')} facts={res.list.map((x) => seriesStats(V[x.k][lang][0] + ' (' + V[x.k].u + ')', x.r.x, x.r.y)).join('\n')} />
                     <h4 className="sh">{L('¿Qué variables se mueven junto con', 'Which variables move together with')} {V[cur.k][lang][0].toLowerCase()}?</h4>
-                    {res.list.filter((x) => x.k !== cur.k).map((x) => { const c = pearson(cur.r.y, x.r.y); return (
+                    {res.list.filter((x) => x.k !== cur.k).map((x) => { const correlation = monthlyCorrelation(cur, x), c = Number.isFinite(correlation.r) ? correlation.r : 0; return (
                       <div key={x.k} className="row" style={{ marginBottom: 6, flexWrap: 'nowrap' }}>
                         <span style={{ width: 170, fontSize: 13 }}>{V[x.k][lang][0]}</span>
                         <div style={{ flex: 1, height: 10, background: 'var(--track)', borderRadius: 6, position: 'relative' }}><motion.div initial={{ width: 0 }} animate={{ width: `${Math.abs(c) * 50}%` }} style={{ position: 'absolute', height: '100%', borderRadius: 6, background: c >= 0 ? '#0c5a43' : '#c2410c', left: c >= 0 ? '50%' : `${50 - Math.abs(c) * 50}%` }} /></div>
-                        <b style={{ width: 44, fontSize: 13, textAlign: 'right' }}>{c.toFixed(2)}</b>
+                        <b title={L(`${correlation.n} meses comunes`, `${correlation.n} common months`)} style={{ width: 44, fontSize: 13, textAlign: 'right' }}>{Number.isFinite(correlation.r) ? c.toFixed(2) : '—'}</b>
                       </div>); })}
-                    <p className="mini">{t.corrHelp}</p>
+                    <p className="mini">{t.corrHelp}</p><Interpret kind="table" title={L('Correlaciones con ', 'Correlations with ') + V[cur.k][lang][0]} facts={tableFacts(['variable','correlation','common months'],res.list.filter(x=>x.k!==cur.k).map(x=>{const pair=monthlyCorrelation(cur,x);return [V[x.k][lang][0],Number.isFinite(pair.r)?pair.r:'unavailable',pair.n];})) + '; series are joined by year and month; dimensionless correlation is not causation'} how={L('El signo indica si las variables se mueven en la misma dirección. Cada comparación usa solo sus meses comunes.', 'The sign indicates whether variables move in the same direction. Each comparison uses only its common months.')} plain={L('Comprueba cuántos meses coinciden y no conviertas una asociación en una explicación causal.', 'Check how many months overlap and do not turn association into a causal explanation.')} />
                   </>)}
                   {cur.r.annual && (
                     <div className="two">
@@ -160,7 +168,7 @@ export default function Lab() {
                       <div><h4 className="sh">{t.heatTitle}</h4><Heatmap pts={cur.raw} k={cur.k} unit={V[cur.k].u} dec={V[cur.k].d} /><p className="mini">{t.heatHelp}</p><AutoExplain title={t.heatTitle} kind="year-by-month heatmap" facts={seriesStats(V[cur.k][lang][0] + ' (monthly values, rows = years, columns = months)', cur.raw.map((p) => p.year + '-' + p.month), cur.raw.map((p) => p.v))} /></div>
                     </div>
                   )}
-                  {cur.k !== 'CSV' && <Compare key={cur.k} k={cur.k} a={cur.r} aName={pname(res.pl)} years={years} ds={ds} live={res.live} />}
+                  {cur.k !== 'CSV' && <Compare key={cur.k} k={cur.k} a={cur.r} aName={pname(res.pl)} years={res.years || years} ds={res.ds ?? ds} live={res.live} />}
                 </Tabs.Panel>
               </Tabs>
             </div>

@@ -22,7 +22,7 @@ export default function FlatMap({ dots, res, place, setPlace, k, vlabel, onInves
   const [fail, setFail] = useState(false), [layer, setLayer] = useState('bm'), [ready, setReady] = useState(false), [tilt, setTilt] = useState(false);
   const cb = useRef({}); cb.current = { setPlace, dots, res, k, vlabel, L };
   useEffect(() => {
-    let dead = false, m;
+    let dead = false, m, resize;
     (async () => {
       const lib = (await import('maplibre-gl')).default; await import('maplibre-gl/dist/maplibre-gl.css'); if (dead || !el.current) return; ml.current = lib;
       const ls = LAYERS();
@@ -44,9 +44,9 @@ export default function FlatMap({ dots, res, place, setPlace, k, vlabel, onInves
       m.on('click', (e) => { const f = m.queryRenderedFeatures(e.point, { layers: ['dots'] })[0]; const { setPlace: sp, dots: ds } = cb.current; if (f) { const d = ds.find((x) => x.id === f.properties.id); if (d) return sp({ id: d.id, lat: d.lat, lon: d.lon }); } sp({ id: 'custom', lat: +e.lngLat.lat.toFixed(2), lon: +((((e.lngLat.lng + 180) % 360 + 360) % 360) - 180).toFixed(2) }); });
       const dot = document.createElement('div'); dot.className = 'fm-you'; mark.current = new lib.Marker({ element: dot }).setLngLat([place.lon, place.lat]).addTo(m);
       m.once('style.load', () => { if (!dead) { map.current = m; setReady(true); m.resize(); } });
-      try { new ResizeObserver(() => m.resize()).observe(el.current); } catch { /* sin observer */ }
+      try { resize = new ResizeObserver(() => { if (!dead) m.resize(); }); resize.observe(el.current); } catch { /* sin observer */ }
     })().catch((e) => { window.__fmerr = [String(e?.message || e).slice(0, 300)]; setFail(true); });
-    return () => { dead = true; try { m?.remove(); } catch { /* ya cerrado */ } };
+    return () => { dead = true; resize?.disconnect(); try { m?.remove(); } catch { /* ya cerrado */ } map.current = null; };
   }, []); // eslint-disable-line
   useEffect(() => { const m = map.current; if (!ready || !m) return; ['bm', 'tc', 'nl', 'lst', 'gpm'].forEach((id) => m.setLayoutProperty(id, 'visibility', id === layer || id === 'bm' && layer !== 'tc' && layer !== 'nl' ? 'visible' : 'none')); }, [layer, ready]);
   useEffect(() => {

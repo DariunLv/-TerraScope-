@@ -7,6 +7,7 @@ import { LuSatelliteDish, LuDroplets, LuChartLine, LuBookOpen, LuRocket, LuShiel
 import PageHead from '../../layout/PageHead';
 import Killa from '../../killa/Killa';
 import Rich from '../../shared/Rich';
+import { useRequest, aborted } from '../../core/useRequest';
 import Ghost from '../../ui/Ghost';
 import { askLLM, getCfg } from '../decide/llm';
 import { useT } from '../../core/i18n';
@@ -36,16 +37,18 @@ export default function Ask() {
   useEffect(() => { setMsgs([{ me: false, text: E('Hi! I am Killa. Ask me anything about NASA, its satellites and data, climate, or how to use this app.', '¡Hola! Soy Killa. Pregúntame lo que quieras sobre la NASA, sus satélites y datos, el clima o cómo usar esta app.') }]); }, [lang]); // eslint-disable-line
   useEffect(() => { const el = box.current; if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }); }, [msgs, busy]);
   const local = (q) => { const f = FAQ.find(([r]) => r.test(q)); return f ? E(f[1], f[2]) : E('I could not reach the online AI right now, and I do not have a stored answer for that. Try “What does this app do?” or “What is NASA POWER?”, or ask again in a moment.', 'No pude conectar con la IA en línea y no tengo una respuesta guardada para eso. Prueba “¿Qué hace esta app?” o “¿Qué es NASA POWER?”, o vuelve a preguntar en un momento.'); };
+  const begin = useRequest([lang]);
+  useEffect(() => { setBusy(false); }, [lang]);
   const send = async (q) => {
     q = (q ?? txt).trim(); if (!q || busy) return; setTxt(''); const hist = msgs; setMsgs((m) => [...m, { me: true, text: q }]); setBusy(true);
-    const cfg = getCfg();
+    const cfg = getCfg(), request = begin();
     try {
       if (cfg.mode === 'rules') throw new Error('rules');
       const sys = `You are Killa, the friendly satellite mascot and AI guide of the TerraScope app. Answer in the same language as the user (default English). Use short paragraphs, plain words, no markdown symbols like ** or #. Use ONLY the knowledge base below for facts about the app; for general NASA/climate knowledge answer carefully and say when unsure.\n\nKNOWLEDGE BASE:\n${KB}`;
-      const text = await askLLM(cfg, { question: q, history: hist, ctx: null, calc: null, lang, sys, raw: true, noVerify: true });
-      setMsgs((m) => [...m, { me: false, text, ai: true }]);
-    } catch { setMsgs((m) => [...m, { me: false, text: local(q) }]); }
-    setBusy(false);
+      const text = await askLLM(cfg, { signal: request.signal, question: q, history: hist, ctx: null, calc: null, lang, sys, raw: true, noVerify: true });
+      if (request.current()) setMsgs((m) => [...m, { me: false, text, ai: true }]);
+    } catch (error) { if (request.current() && !aborted(error)) setMsgs((m) => [...m, { me: false, text: local(q) }]); }
+    finally { if (request.current()) setBusy(false); }
   };
   return (
     <div className="ask">

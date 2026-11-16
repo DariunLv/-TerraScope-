@@ -14,8 +14,9 @@ import useFx from './ui/useFx';
 const TargetCursor = lazy(() => import('./components/reactbits/TargetCursor/TargetCursor'));
 import { useEffect } from 'react';
 import { useStore } from './core/store';
-import { startAgent, runCycle } from './features/decide/agent';
+import { startAgent, stopAgent } from './features/decide/agent';
 import { useT } from './core/i18n';
+import { startNavigation } from './core/navigation';
 const WorldMap = lazy(() => import('./features/explore/WorldMap'));
 const Lab = lazy(() => import('./features/lab/Lab'));
 const Lakes = lazy(() => import('./features/lakes/Lakes'));
@@ -42,16 +43,8 @@ class Guard extends Component {
 }
 const V = { inicio: Hero, explorar: WorldMap, lab: Lab, decidir: Decide, lagos: Lakes, aprender: Game, proyecto: Project, killa: Ask };
 export default function App() {
-  useEffect(() => { try { const v = new URLSearchParams(location.search).get('vista'); if (v && V[v]) useStore.setState({ view: v }); } catch { /* sin parámetros */ } }, []);
-  useEffect(() => { // precarga en reposo: el globo 3D y las vistas principales ya están listos cuando se abren
-    try { const c = navigator.connection; if (c && (c.saveData || /2g/.test(c.effectiveType || ''))) return; } catch { /* sin red info */ }
-    const run = () => { import('./shared/earth/EarthView'); import('./features/explore/WorldMap'); import('./features/lab/Lab'); import('./features/decide/Decide'); };
-    const id = setTimeout(run, 300);
-    return () => clearTimeout(id);
-  }, []);
-  useEffect(() => { startAgent(); const t = setTimeout(() => { try { sessionStorage.removeItem('ts_reload'); } catch { /* */ } }, 10000); const h = () => { if (!sessionStorage.getItem('ts_reload')) { try { sessionStorage.setItem('ts_reload', '1'); } catch { /* */ } location.reload(); } }; window.addEventListener('vite:preloadError', h); return () => { clearTimeout(t); window.removeEventListener('vite:preloadError', h); }; }, []);
-  const practice = useStore((s) => s.practice), lakesL = useStore((s) => s.lakes);
-  useEffect(() => { const t = setTimeout(() => { if (useStore.getState().agent.last) runCycle(); }, 800); return () => clearTimeout(t); }, [practice, lakesL]);
+  useEffect(() => startNavigation(useStore), []);
+  useEffect(() => { startAgent(); const t = setTimeout(() => { try { sessionStorage.removeItem('ts_reload'); } catch { /* */ } }, 10000); const h = () => { if (!sessionStorage.getItem('ts_reload')) { try { sessionStorage.setItem('ts_reload', '1'); } catch { /* */ } location.reload(); } }; window.addEventListener('vite:preloadError', h); return () => { clearTimeout(t); stopAgent(); window.removeEventListener('vite:preloadError', h); }; }, []);
   const fx = useFx(); useEffect(() => { try { document.documentElement.lang = useStore.getState().lang; } catch { /* sin DOM */ } }, [useStore((s) => s.lang)]); const { t, lang } = useT(); const view = useStore((s) => s.view), collapsed = useStore((s) => s.collapsed); const C = V[view] || Hero, home = view === 'inicio';
   return (
     <ClickSpark sparkColor="#0c5a43" sparkSize={12} sparkRadius={22} sparkCount={9}>

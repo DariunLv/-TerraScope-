@@ -1,3 +1,4 @@
+import { readCsv, csvNumber, normalizeHeader, validatedCsvRows } from '../../lib/data/csv.js';
 /* Inventario de referencia de lagos, lagunas y embalses del Perú.
    Coordenadas, altitud y área son APROXIMADAS (referencia para el prototipo).
    Para análisis oficial, reemplazar por el inventario de la ANA / INAIGEM. */
@@ -51,23 +52,22 @@ export const SAMPLE_POINTS = [['Puno', -15.84, -70.02], ['Juliaca', -15.5, -70.1
 export function km(a, b) { const R = 6371, r = Math.PI / 180, dl = (b.lat - a.lat) * r, dn = (b.lon - a.lon) * r, h = Math.sin(dl / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dn / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); }
 /* Lee CSV de puntos: columnas lat y lon (o latitud/longitud); nombre opcional */
 export function parsePoints(text) {
-  const rows = text.split(/\r?\n/).filter((l) => l.trim()), sep = rows[0].includes(';') ? ';' : ',';
-  const head = rows[0].split(sep).map((h) => h.trim().toLowerCase()), ia = head.findIndex((h) => /^lat/.test(h)), io = head.findIndex((h) => /^(lon|lng)/.test(h)), inm = head.findIndex((h) => /nom|name|cod/.test(h));
+  const rows = readCsv(text); if (rows.length < 2) return [];
+  const head = rows[0].map(normalizeHeader), ia = head.findIndex((h) => /^lat/.test(h)), io = head.findIndex((h) => /^(lon|lng)/.test(h)), inm = head.findIndex((h) => /nom|name|cod/.test(h));
   if (ia < 0 || io < 0) return [];
-  return rows.slice(1).map((r, i) => { const c = r.split(sep); return { name: inm >= 0 ? c[inm] : `P${i + 1}`, lat: parseFloat(c[ia]), lon: parseFloat(c[io]) }; }).filter((p) => !isNaN(p.lat) && !isNaN(p.lon));
+  return validatedCsvRows(rows.slice(1).map((c, i) => ({ name: inm >= 0 ? c[inm] : `P${i + 1}`, lat: csvNumber(c[ia]), lon: csvNumber(c[io]) })), (p) => !Number.isFinite(p.lat) || Math.abs(p.lat) > 90 ? 'lat' : !Number.isFinite(p.lon) || Math.abs(p.lon) > 180 ? 'lon' : null);
 }
 
 /* Lee un inventario oficial en CSV. Columnas reconocidas (en cualquier orden): nombre, lat, lon, altitud, area, region/departamento, tipo, vertiente/cuenca */
 export function parseLakes(text) {
-  const rows = text.split(/\r?\n/).filter((l) => l.trim()); if (rows.length < 2) return [];
-  const sep = rows[0].includes(';') ? ';' : rows[0].includes('\t') ? '\t' : ',', norm = (h) => h.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/^"|"$/g, '');
-  const head = rows[0].split(sep).map(norm), col = (re) => head.findIndex((h) => re.test(h));
+  const rows = readCsv(text); if (rows.length < 2) return [];
+  const norm = normalizeHeader, head = rows[0].map(norm), col = (re) => head.findIndex((h) => re.test(h));
   const ix = { name: col(/^(nom|name|lagun|lago)/), lat: col(/^lat/), lon: col(/^(lon|lng)/), alt: col(/^(alt|elev|cota)/), area: col(/^(area|superf)/), dep: col(/^(dep|reg|prov)/), type: col(/^(tipo|type|clase)/), vert: col(/^(vert|cuenc|basin|aaa)/) };
   if (ix.lat < 0 || ix.lon < 0) return [];
-  const numf = (v) => parseFloat(String(v ?? '').replace(/"/g, '').replace(',', sep === ',' ? ',' : '.'));
+  const numf = csvNumber;
   const tkeys = Object.keys(TYPES), guess = (t, alt) => { const n = norm(String(t || '')); const k = tkeys.find((q) => n.startsWith(q.slice(0, 5))); return k || (alt >= 4400 ? 'glaciar' : alt >= 3000 ? 'altoandino' : alt >= 800 ? 'embalse' : 'amazonico'); };
-  return rows.slice(1).map((r, i) => { const c = r.split(sep), lat = numf(c[ix.lat]), lon = numf(c[ix.lon]), alt = ix.alt >= 0 ? numf(c[ix.alt]) || 0 : 0, area = ix.area >= 0 ? numf(c[ix.area]) || 0.1 : 0.1;
-    return { id: 'u' + i, name: ix.name >= 0 ? String(c[ix.name]).replace(/"/g, '').trim() : `Lago ${i + 1}`, lat, lon, alt, area, dep: ix.dep >= 0 ? String(c[ix.dep]).replace(/"/g, '').trim() : '—', type: guess(ix.type >= 0 ? c[ix.type] : '', alt), vert: ix.vert >= 0 ? String(c[ix.vert]).replace(/"/g, '').trim() : '—' }; }).filter((l) => !isNaN(l.lat) && !isNaN(l.lon) && Math.abs(l.lat) <= 90 && Math.abs(l.lon) <= 180);
+  return validatedCsvRows(rows.slice(1).map((c, i) => { const lat = numf(c[ix.lat]), lon = numf(c[ix.lon]), alt = ix.alt >= 0 ? numf(c[ix.alt]) : 0, area = ix.area >= 0 ? numf(c[ix.area]) : 0.1;
+    return { id: 'u' + i, name: ix.name >= 0 ? String(c[ix.name] || '').trim() : `Lago ${i + 1}`, lat, lon, alt, area, dep: ix.dep >= 0 ? String(c[ix.dep] || '').trim() : '—', type: guess(ix.type >= 0 ? c[ix.type] : '', alt), vert: ix.vert >= 0 ? String(c[ix.vert] || '').trim() : '—' }; }), (l) => !Number.isFinite(l.lat) || Math.abs(l.lat) > 90 ? 'lat' : !Number.isFinite(l.lon) || Math.abs(l.lon) > 180 ? 'lon' : !Number.isFinite(l.alt) ? 'alt' : !Number.isFinite(l.area) || l.area <= 0 ? 'area' : null);
 }
 
 export const vertName = (v, lang) => (lang === 'es' ? v : ({ Atlántico: 'Atlantic', Pacífico: 'Pacific' }[v] || v));

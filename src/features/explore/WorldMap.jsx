@@ -13,27 +13,37 @@ import { V, KEYS, PLACES, power, demo } from '../../lib/nasa/data';
 import { useStore, placeLabel } from '../../core/store';
 import { useT } from '../../core/i18n';
 import { EChart, useWidth } from '../../shared/charts/hooks';
+import { useRequest, aborted } from '../../core/useRequest';
+import { runAnalysis } from '../../lib/analysis/run';
+import { coverageOf } from '../../lib/data/monthly';
+import { useRouteState } from '../../core/useRouteState';
 const UP = '#c2410c', DOWN = '#1e40af';
 export default function WorldMap() {
   const { lang } = useT(); const L = (a, b) => (lang === 'es' ? a : b);
   const { place, setPlace, setMapOpen, scan, setScan, openCase, practice } = useStore();
   const [ref, w] = useWidth(); const h = Math.round(Math.min(560, Math.max(280, w * 0.52)));
-  const [mode, setMode] = useState('globe'); const [k, setK] = useState('T2M'); const [prog, setProg] = useState(null); 
+  const [mode, setMode] = useRouteState('mapa', 'globe', (value) => ['globe', 'map'].includes(value)); const [k, setK] = useRouteState('variable', 'T2M', (value) => KEYS.includes(value)); const [prog, setProg] = useState(null);
+  const begin = useRequest([k, practice]);
+  useEffect(() => { setProg(null); }, [k, practice]);
   const run = async () => {
-    const out = []; let live = !practice, done = 0; setProg(0);
-    const one = async (p) => {
-      let d;
-      if (live) { try { d = (await power(p.lat, p.lon, [k], 1981, 2025))[k]; } catch { live = false; } }
-      if (!d) d = demo(p.lat, p.lon, [k], 1981, 2025)[k];
-      try { const r = S.analyze(d, {}); out.push({ id: p.id, lat: p.lat, lon: p.lon, name: p[lang], perDec: r.perDec, p: r.p, level: r.level }); } catch { /* corta */ }
-      setProg(Math.round((++done / PLACES.length) * 100));
-    };
-    const q = [...PLACES]; await Promise.all(Array.from({ length: 4 }, async () => { while (q.length) await one(q.shift()); }));
-    const sig = bh(out.map((o) => o.p)); out.forEach((o, i) => { o.fdr = sig[i]; });
-    out.sort((a, b) => b.perDec - a.perDec);
-    setScan({ k, live, list: out, naive: out.filter((o) => o.p < 0.05).length, fdr: out.filter((o) => o.fdr).length }); setProg(null);
+    const request = begin(), items = []; let done = 0; setProg(0);
+    try {
+      const y1 = new Date().getUTCFullYear() - 1, q = [...PLACES];
+      await Promise.all(Array.from({ length: 4 }, async () => { while (q.length && request.current()) {
+        const p = q.shift();
+        try { const points = practice ? demo(p.lat, p.lon, [k], 1981, y1)[k] : (await power(p.lat, p.lon, [k], 1981, y1, { signal: request.signal }))[k];
+          if (points?.length >= 24) items.push({ points, meta: { id: p.id, lat: p.lat, lon: p.lon, name: p[lang], source: practice ? 'demo' : 'NASA POWER', coverage: coverageOf(points) } });
+        } catch (error) { if (aborted(error)) throw error; }
+        if (request.current()) setProg(Math.round((++done / PLACES.length) * 70));
+      } }));
+      const out = await runAnalysis('scan', { items, options: {} }, { signal: request.signal, onProgress: (progress) => request.current() && setProg(70 + Math.round(progress * 30)) });
+      if (!request.current()) return;
+      const sig = bh(out.map((o) => o.p)); out.forEach((o, i) => { o.fdr = sig[i]; }); out.sort((a, b) => b.perDec - a.perDec);
+      setScan({ k, live: !practice, practice, missing: PLACES.length - out.length, list: out, naive: out.filter((o) => o.p < 0.05).length, fdr: out.filter((o) => o.fdr).length });
+    } catch (error) { if (request.current() && !aborted(error)) setScan({ k, live: !practice, practice, list: [], missing: PLACES.length, naive: 0, fdr: 0 }); }
+    finally { if (request.current()) setProg(null); }
   };
-  const res = scan && scan.k === k ? scan : null;
+  const res = scan && scan.k === k && scan.practice === practice ? scan : null;
   const max = res ? d3.max(res.list, (d) => Math.abs(d.perDec)) || 1 : 1;
   const dots = res ? res.list : PLACES.map((p) => ({ id: p.id, lat: p.lat, lon: p.lon, name: p[lang] }));
   const bar = res && { grid: { left: 150, right: 30, top: 6, bottom: 22 }, tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } }, xAxis: { type: 'value', axisLabel: { color: '#5b6b8c' }, splitLine: { lineStyle: { color: 'rgba(91,107,140,.18)' } } }, yAxis: { type: 'category', inverse: true, data: res.list.map((d) => d.name), axisLabel: { color: '#14213d', fontSize: 11, width: 140, overflow: 'truncate' } },
@@ -68,7 +78,7 @@ export default function WorldMap() {
               <div className="kpi"><span>p &lt; 0,05 {L('sin corregir', 'uncorrected')}</span><b>{res.naive} / {res.list.length}</b></div>
               <div className="kpi"><span>{L('Tras corrección FDR', 'After FDR correction')}</span><b>{res.fdr} / {res.list.length}</b></div>
             </div>
-            <p className="mini">{L('Al probar 30 lugares a la vez, algunos saldrían “significativos” solo por azar. Aplicamos Benjamini-Hochberg (tasa de falsos descubrimientos al 5 %), como recomienda Wilks (2016).', 'Testing 30 places at once, some would look “significant” by chance alone. We apply Benjamini-Hochberg (5 % false discovery rate), as Wilks (2016) recommends.')} {!res.live && L('Datos de práctica (simulados).', 'Practice (simulated) data.')}</p>
+            <p className="mini">{L('Al probar 30 lugares a la vez, algunos saldrían “significativos” solo por azar. Aplicamos Benjamini-Hochberg (tasa de falsos descubrimientos al 5 %), como recomienda Wilks (2016).', 'Testing 30 places at once, some would look “significant” by chance alone. We apply Benjamini-Hochberg (5 % false discovery rate), as Wilks (2016) recommends.')} {!res.live && L('Datos de práctica (simulados).', 'Practice (simulated) data.')} {res.missing > 0 && L(`${res.missing} lugares sin datos suficientes; no se sustituyeron por simulaciones.`, `${res.missing} locations lack sufficient data; they were not replaced with simulations.`)}</p>
           </div>
           <div className="card panel"><h3>{L('Ranking por década', 'Ranking per decade')} ({V[k].u})</h3><EChart option={bar} deps={[res]} h={Math.max(320, res.list.length * 17)} /></div>
         </motion.div>

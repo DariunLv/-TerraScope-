@@ -89,9 +89,10 @@ function Twins({ lake, L, lang }) {
   const tw = useMemo(() => { const s = { alt: sd(LAKES.map((l) => l.alt)), ar: sd(LAKES.map((l) => Math.log10(l.area + 1))) }; return LAKES.filter((l) => l.id !== lake.id).map((l) => ({ l, dist: Math.hypot((l.alt - lake.alt) / s.alt, (Math.log10(l.area + 1) - Math.log10(lake.area + 1)) / s.ar, (l.type === lake.type ? 0 : 0.6)), km: km(l, lake) })).sort((a, b) => a.dist - b.dist).slice(0, 3); }, [lake.id, LAKES]);
   const [res, setRes] = useState(null);
   useEffect(() => { let dead = false; setRes(null); Promise.all([lake, ...tw.map((t) => t.l)].map((l) => lakeClimate(l, practice).then((c) => { const ann = c.ann, x = ann.map((a) => a.year), y = ann.map((a) => a.wb), mk = S.mannKendall(y), sl = S.senSlope(x, y, mk.varS).slope * 10; return { l, sl, p: mk.p, m: mean(y) }; }).catch(() => null))).then((r) => { if (!dead) setRes(r.filter(Boolean)); }); return () => { dead = true; }; }, [lake.id, practice]);
-  const me = res?.[0], others = res?.slice(1) || [];
+  const me = res?.find((item) => item.l.id === lake.id), others = res?.filter((item) => item.l.id !== lake.id) || [];
   const reading = me ? L(`${lake.name} (${lake.alt} m, ${lake.area} km²) tiene tres lagos gemelos por altitud, tamaño y tipo: ${tw.map((t) => t.l.name).join(', ')}. Su balance cambia ${Math.round(me.sl)} mm por década. ${others.length ? `Entre los gemelos va de ${Math.round(Math.min(...others.map((o) => o.sl)))} a ${Math.round(Math.max(...others.map((o) => o.sl)))} mm por década: ${others.every((o) => Math.sign(o.sl) === Math.sign(me.sl)) ? 'todos van en la misma dirección, así que es probable que sea algo regional.' : 'no todos van igual, así que lo local pesa.'}` : ''}`,
     `${lake.name} (${lake.alt} m, ${lake.area} km²) has three twin lakes by altitude, size and type: ${tw.map((t) => t.l.name).join(', ')}. Its balance changes ${Math.round(me.sl)} mm per decade. ${others.length ? `Among its twins it runs from ${Math.round(Math.min(...others.map((o) => o.sl)))} to ${Math.round(Math.max(...others.map((o) => o.sl)))} mm per decade: ${others.every((o) => Math.sign(o.sl) === Math.sign(me.sl)) ? 'all go the same way, so it is probably regional.' : 'they do not all go the same way, so local factors matter.'}` : ''}`) : '';
+  if (res && !me) return <Alert color="orange">{L('No hay datos suficientes para este lago.', 'Not enough data for this lake.')}</Alert>;
   return (<>
     <p className="sub">{L('Los tres lagos más parecidos a este (altitud, tamaño y tipo) y cómo les va. Si todos cambian igual, el cambio es regional; si no, es local.', 'The three lakes most like this one (altitude, size and type) and how they are doing. If they all change alike the change is regional; if not, it is local.')}</p>
     {!res ? <Wait /> : (<>
@@ -110,12 +111,12 @@ function Twins({ lake, L, lang }) {
 
 export function LakeLab({ lake, L, lang }) {
   const practice = useStore((s) => s.practice), [clim, setClim] = useState(null), [t, setT] = useState('pulse');
-  useEffect(() => { let dead = false; setClim(null); lakeClimate(lake, practice).then((c) => { if (!dead) setClim(c); }); return () => { dead = true; }; }, [lake.id, lake.lat, practice]);
+  useEffect(() => { const controller = new AbortController(); setClim(null); lakeClimate(lake, practice, { signal: controller.signal }).then((c) => { if (!controller.signal.aborted) setClim(c); }).catch(() => { if (!controller.signal.aborted) setClim(false); }); return () => controller.abort(); }, [lake.id, lake.lat, lake.lon, practice]);
   const TABS = [['pulse', L('Pulso vital', 'Vital signs')], ['stripes', L('Código de barras', 'Water barcode')], ['seasons', L('Estaciones: antes y ahora', 'Seasons: then and now')], ['twins', L('Lagos gemelos', 'Twin lakes')]];
   return (<>
     <div className="subtabs">{TABS.map(([v, l]) => <button key={v} className={t === v ? 'on' : ''} onClick={() => setT(v)}>{l}</button>)}</div>
     <div style={{ paddingTop: 14 }}>
-      {t === 'twins' ? <Twins lake={lake} L={L} lang={lang} /> : !clim ? <Wait /> : t === 'pulse' ? <Pulse lake={lake} clim={clim} L={L} lang={lang} /> : t === 'stripes' ? <Stripes lake={lake} clim={clim} L={L} lang={lang} /> : <Seasons lake={lake} clim={clim} L={L} lang={lang} />}
+      {t === 'twins' ? <Twins lake={lake} L={L} lang={lang} /> : clim === false ? <Alert color="orange">{L('No hay datos suficientes. Reintenta o activa Práctica.', 'Not enough data. Retry or enable Practice.')}</Alert> : !clim ? <Wait /> : t === 'pulse' ? <Pulse lake={lake} clim={clim} L={L} lang={lang} /> : t === 'stripes' ? <Stripes lake={lake} clim={clim} L={L} lang={lang} /> : <Seasons lake={lake} clim={clim} L={L} lang={lang} />}
     </div>
   </>);
 }

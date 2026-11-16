@@ -1,6 +1,6 @@
 /* Killa, la mascota de TerraScope. Con vida: flota, respira, mira al puntero, reacciona al toque y cambia de pose con un fundido.
    estado: una de las 36 poses (ver POSES). live=false la deja quieta (por ejemplo en listas). */
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useMotionValue, useReducedMotion, useSpring, useTransform } from 'framer-motion';
 
 export const POSES = ['bienvenida', 'explorando', 'analizando', 'esperando', 'hallazgo', 'alerta', 'celebrando', 'reintentar', 'explicando', 'duda', 'sorpresa', 'pensando', 'idea', 'orgullosa', 'avergonzada', 'riendo', 'triste', 'decidida', 'lupa', 'globo', 'ubicacion', 'titicaca', 'comparando', 'tormenta', 'radar', 'grafico', 'bitacora', 'ensenando', 'siguiente', 'pista', 'confirmado', 'sin-conexion', 'reloj', 'sin-datos', 'evidencia', 'descarga'];
@@ -43,12 +43,14 @@ export default function Killa({ estado = 'bienvenida', size = 144, alt = '', cla
 }
 
 /* Killa con globo de diálogo que escribe el texto letra a letra */
-export function KillaSay({ estado, text, size = 110, side = 'right', className = '', tone = 'light' }) {
+const MemoAvatar = memo(Killa);
+export function KillaSay({ estado, text, size = 110, side = 'right', className = '', tone = 'light', memoAvatar = false }) {
+  const Avatar = memoAvatar ? MemoAvatar : Killa;
   const [n, setN] = useState(0);
   useEffect(() => { setN(0); if (!text) return; const id = setInterval(() => setN((v) => (v >= text.length ? (clearInterval(id), v) : v + 1)), 18); return () => clearInterval(id); }, [text]);
   return (
     <div className={`killasay ${side} ${tone} ${className}`}>
-      <Killa estado={estado} size={size} />
+      <Avatar estado={estado} size={size} />
       {text && <motion.div className="killa-bubble" key={text} initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: 'spring', stiffness: 300, damping: 18 }}><span>{text.slice(0, n)}<i className="caret" /></span></motion.div>}
     </div>
   );

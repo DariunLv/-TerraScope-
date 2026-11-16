@@ -1,16 +1,19 @@
 /* “¿De qué trata?”: explica en 20 segundos qué es la app, cómo se usa y qué tiene (con la IA destacada). */
 import { motion } from 'framer-motion';
+import { memo } from 'react';
+import HomeVisibility from './HomeVisibility';
 import { Button } from '@mantine/core';
 import { IconArrowRight, IconSparkles } from '@tabler/icons-react';
 import { LuMapPin, LuSatelliteDish, LuTrafficCone, LuTelescope, LuBot, LuFingerprint, LuBell, LuBookOpen, LuWaves, LuChartLine, LuMessagesSquare, LuGlobe } from 'react-icons/lu';
 import { PiRobotBold } from 'react-icons/pi';
 import TrueFocus from '../../components/reactbits/TrueFocus/TrueFocus';
-import Killa from '../../killa/Killa';
+import KillaView from '../../killa/Killa';
 import Ghost from '../../ui/Ghost';
 import Lot from '../../ui/Lot';
 import { useStore } from '../../core/store';
 import { useT } from '../../core/i18n';
 import useFx from '../../ui/useFx';
+const Killa = memo(KillaView);
 export default function About() {
   const { lang } = useT(), L = (a, b) => (lang === 'es' ? a : b), setView = useStore((s) => s.setView), fx = useFx();
   const steps = [
@@ -41,7 +44,7 @@ export default function About() {
             <i className="step-n">0{i + 1}</i>
             <div className="step-vis">
               {i === 0 && <><span className="ripple"><i /><i /><i /></span><Killa estado="ubicacion" size={118} live={false} shadow={false} /></>}
-              {i === 1 && <Lot k="globe" size={170} />}
+              {i === 1 && <Lot pauseOffscreen k="globe" size={170} />}
               {i === 2 && <><Killa estado="explicando" size={128} /><span className="lights"><i className="g" /><i className="a" /><i className="r" /></span></>}
             </div>
             <span className="about-ico"><I size={24} /></span><b>{a}</b><span>{b}</span>
@@ -55,8 +58,8 @@ export default function About() {
             <Ghost k={g} i={i} size={span === 3 ? 170 : 120} />
             <span className="about-ico sm"><I size={22} /></span><b>{a}</b><span className="bf-d">{b}</span>
             {vis === 'lights' && <span className="lights big"><i className="g" /><i className="a" /><i className="r" /></span>}
-            {vis === 'lakes' && <Lot k="lakes" size={210} className="bf-lot" />}
-            {vis === 'thermo' && <Lot k="thermo" size={92} className="bf-lot sm" />}
+            {vis === 'lakes' && <Lot pauseOffscreen k="lakes" size={210} className="bf-lot" />}
+            {vis === 'thermo' && <Lot pauseOffscreen k="thermo" size={92} className="bf-lot sm" />}
             {vis === 'lupa' && <span className="bf-killa"><Killa estado="lupa" size={92} live={false} shadow={false} tap={false} /></span>}
             {vis === 'globo' && <span className="bf-killa"><Killa estado="globo" size={92} live={false} shadow={false} tap={false} /></span>}
             {vis === 'learn' && <span className="bf-killa"><Killa estado="ensenando" size={92} live={false} shadow={false} tap={false} /></span>}
@@ -69,7 +72,7 @@ export default function About() {
         <div className="about-ai-l">
           <span className="ph-eyebrow light"><PiRobotBold size={15} />{L('Inteligencia artificial', 'Artificial intelligence')}</span>
           <h3>{L('Conoce a Killa, la IA de la app', 'Meet Killa, the app’s AI')}</h3>
-          <div className="about-tf">{fx ? <TrueFocus sentence={L('Pregunta Entiende Decide', 'Ask Understand Decide')} blurAmount={3} borderColor="#5eead4" animationDuration={0.6} pauseBetweenAnimations={1.2} /> : <b>{L('Pregunta · Entiende · Decide', 'Ask · Understand · Decide')}</b>}</div>
+          {fx ? <HomeVisibility className="about-tf">{visible => <TrueFocus paused={!visible} sentence={L('Pregunta Entiende Decide', 'Ask Understand Decide')} blurAmount={3} borderColor="#5eead4" animationDuration={0.6} pauseBetweenAnimations={1.2} />}</HomeVisibility> : <div className="about-tf"><b>{L('Pregunta · Entiende · Decide', 'Ask · Understand · Decide')}</b></div>}
           <ul>
             <li><LuMessagesSquare size={18} />{L('Responde cualquier pregunta sobre la NASA, los datos y esta app.', 'Answers any question about NASA, the data and this app.')}</li>
             <li><LuTelescope size={18} />{L('Explica cada gráfico en palabras simples, con los números reales.', 'Explains every chart in plain words, using the real numbers.')}</li>

@@ -26,9 +26,28 @@ export default function MapModal() {
   const { t } = useT();
   const { mapOpen, setMapOpen, place, setPlace } = useStore();
   const el = useRef(null); const map = useRef(null); const marker = useRef(null); const lib = useRef(null);
+  const dialog = useRef(null), currentLayer = useRef('0'), currentPlace = useRef(place); currentPlace.current = place;
   const [layer, setLayer] = useState('0'); const [err, setErr] = useState(false);
+  currentLayer.current = layer;
   useEffect(() => {
     if (!mapOpen) return;
+    const previousFocus = document.activeElement, previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden'; dialog.current?.focus();
+    const keyboard = (event) => {
+      if (event.key === 'Escape') { event.preventDefault(); setMapOpen(false); }
+      if (event.key !== 'Tab') return;
+      const controls = [...(dialog.current?.querySelectorAll('button:not([disabled]),input:not([disabled]),a[href],[tabindex="0"]') || [])].filter((element) => !element.hidden);
+      const first = controls[0], last = controls.at(-1);
+      if (!first) { event.preventDefault(); return; }
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog.current)) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && (document.activeElement === last || document.activeElement === dialog.current)) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', keyboard);
+    return () => { document.removeEventListener('keydown', keyboard); document.body.style.overflow = previousOverflow; previousFocus?.focus?.(); };
+  }, [mapOpen, setMapOpen]);
+  useEffect(() => {
+    if (!mapOpen) return;
+    setErr(false);
     let dead = false;
     (async () => {
       try {
@@ -45,13 +64,18 @@ export default function MapModal() {
         m.on('click', (e) => { setPlace({ id: 'custom', lat: +e.lngLat.lat.toFixed(3), lon: +e.lngLat.lng.toFixed(3) }); });
         m.on('error', () => {});
         map.current = m;
+        m.once('load', () => {
+          if (dead) return;
+          ['bm', 'nl', 'tc', 'gpm', 'lst'].forEach((id, index) => m.getLayer(id) && m.setLayoutProperty(id, 'visibility', String(index) === currentLayer.current ? 'visible' : 'none'));
+          marker.current?.setLngLat([currentPlace.current.lon, currentPlace.current.lat]);
+        });
       } catch { setErr(true); }
     })();
     return () => { dead = true; map.current?.remove(); map.current = null; };
   }, [mapOpen]);
   useEffect(() => { marker.current?.setLngLat([place.lon, place.lat]); }, [place]);
   useEffect(() => {
-    const m = map.current; if (!m) return;
+    const m = map.current; if (!m || !m.isStyleLoaded()) return;
     ['bm', 'nl', 'tc', 'gpm', 'lst'].forEach((id, i) => m.getLayer(id) && m.setLayoutProperty(id, 'visibility', String(i) === layer ? 'visible' : 'none'));
   }, [layer, mapOpen]);
   const go = () => { setMapOpen(false); useStore.getState().openCase({ vars: ['T2M', 'PRECTOTCORR', 'GWETROOT'] }, useStore.getState().place); };
@@ -59,7 +83,7 @@ export default function MapModal() {
     <AnimatePresence>
       {mapOpen && (
         <motion.div className="modal-back" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMapOpen(false)}>
-          <motion.div className="glass modal" initial={{ scale: 0.4, opacity: 0, borderRadius: 400 }} animate={{ scale: 1, opacity: 1, borderRadius: 24 }} exit={{ scale: 0.6, opacity: 0 }} transition={{ type: 'spring', damping: 22, stiffness: 160 }} onClick={(e) => e.stopPropagation()}>
+          <motion.div ref={dialog} role="dialog" aria-modal="true" aria-label={t.mapHint} tabIndex={-1} className="glass modal" initial={{ scale: 0.4, opacity: 0, borderRadius: 400 }} animate={{ scale: 1, opacity: 1, borderRadius: 24 }} exit={{ scale: 0.6, opacity: 0 }} transition={{ type: 'spring', damping: 22, stiffness: 160 }} onClick={(e) => e.stopPropagation()}>
             <div className="row" style={{ justifyContent: 'space-between', marginBottom: 10 }}>
               <SegmentedControl size="xs" value={layer} onChange={setLayer} data={t.mapLayers.map((l, i) => ({ label: l, value: String(i) }))} />
               <ActionIcon variant="subtle" onClick={() => setMapOpen(false)} aria-label={t.close}><IconX /></ActionIcon>

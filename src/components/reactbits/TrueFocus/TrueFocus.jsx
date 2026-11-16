@@ -26,6 +26,7 @@ const TrueFocus = ({
   glowColor = 'transparent',
   animationDuration = 0.5,
   pauseBetweenAnimations = 1,
+  paused = false,
   cornerSize = 16,
   borderWidth = 3,
   unfocusedOpacity = 1
@@ -44,7 +45,7 @@ const TrueFocus = ({
     : { duration, ease: SMOOTH_EASE };
 
   useEffect(() => {
-    if (manualMode || words.length < 2) return;
+    if (manualMode || paused || words.length < 2) return;
     const interval = setInterval(
       () => {
         const roll = Math.random();
@@ -58,7 +59,7 @@ const TrueFocus = ({
       (animationDuration + pauseBetweenAnimations) * 1000
     );
     return () => clearInterval(interval);
-  }, [manualMode, animationDuration, pauseBetweenAnimations, words.length, order]);
+  }, [manualMode, paused, animationDuration, pauseBetweenAnimations, words.length, order]);
 
   useIsomorphicLayoutEffect(() => {
     const container = containerRef.current;

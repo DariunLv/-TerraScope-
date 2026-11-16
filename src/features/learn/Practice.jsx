@@ -1,3 +1,5 @@
+import Interpret from '../../shared/Interpret';
+import { stats as seriesStats } from '../../shared/charts/chartFacts';
 import { useState, useMemo } from 'react';
 import { Button, Slider } from '@mantine/core';
 import { IconCheck, IconX } from '@tabler/icons-react';
@@ -34,6 +36,7 @@ function FitLine({ L }) {
         <button className="textlink" onClick={() => setShow(!show)}>{show ? L('Ocultar la respuesta', 'Hide the answer') : L('Ver la línea que calcula la regresión', 'Show the regression line')}</button>
         <button className="textlink" onClick={() => { setY(mk()); setS(0); setShow(false); }}>{L('Otra serie', 'Another series')}</button>
       </div>
+      <Interpret title={L('Ajustar una recta a los datos', 'Fitting a line to the data')} facts={seriesStats('simulated points, arbitrary units',x,y) + `; user slope ${s}; squared error ${mine}; fit score ${score}/100; ${show ? 'revealed regression slope '+o.slope+'; regression p '+o.p : 'model answer is still hidden; explain the user fit without revealing the optimal slope'}`} how={L('La línea verde es tu ajuste. La puntuación compara su error con el mejor ajuste posible en esta simulación.', 'The green line is your fit. The score compares its error with the best possible fit in this simulation.')} plain={L('Busca una recta que reduzca el error del conjunto, no una que pase por todos los puntos.', 'Look for a line that reduces the overall error, not one that passes through every point.')} />
       {show && <p className="mini">{L(`La regresión elige la pendiente que hace mínimo el error total: ${o.slope.toFixed(3)} por paso. La prueba t pregunta si esa pendiente es distinta de cero (aquí p ${o.p < 0.001 ? '< 0,001' : '= ' + o.p.toFixed(3)}).`, `Regression picks the slope with the smallest total error: ${o.slope.toFixed(3)} per step. The t-test asks whether that slope differs from zero (here p ${o.p < 0.001 ? '< 0.001' : '= ' + o.p.toFixed(3)}).`)}</p>}
     </div>
   );
@@ -61,6 +64,7 @@ export default function Practice() {
           </motion.div>
         )}
         <p className="mini">{t.gameScore}: {sc[0]} / {sc[1]}</p>
+        {ans !== null && <Interpret title={L('Resultado del juego de tendencia', 'Trend game result')} facts={seriesStats('simulated game series, arbitrary units',g.y.map((_,i)=>i),g.y) + `; planted trend ${g.trend}; Mann-Kendall p ${g.p}; significance threshold 0.05; the visual pattern and the statistical test can disagree`} how={L('La línea muestra los datos simulados y la prueba contrasta el patrón con lo esperable por azar.', 'The line shows simulated data and the test compares the pattern with chance.')} plain={L('La respuesta del juego usa la prueba estadística. Una prueba no es una garantía y el ruido puede ocultar una señal sembrada.', 'The game answer uses the statistical test. A test is not a guarantee, and noise may hide a planted signal.')} />}
       </div>
       <FitLine L={L} />
     </>

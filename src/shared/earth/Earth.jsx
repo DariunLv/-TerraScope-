@@ -1,18 +1,21 @@
-/* Carga diferida del planeta CesiumJS, con respaldo si el equipo no tiene WebGL */
-import { Component, lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { useStore } from '../../core/store';
-import earth from '../../assets/earth-day.jpg';
-const EarthView = lazy(() => import('./EarthView'));
-function hasWebGL() { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch { return false; } }
-class Safe extends Component { state = { bad: false }; static getDerivedStateFromError() { return { bad: true }; } componentDidCatch(e) { console.warn('Planeta 3D no disponible:', e?.message); } render() { return this.state.bad ? this.props.fallback : this.props.children; } }
-const GL = typeof document !== 'undefined' && hasWebGL();
-const slow = () => { try { const c = navigator.connection; return !!c && (c.saveData || /(^|-)2g$|3g/.test(c.effectiveType || '')); } catch { return false; } };
+/* Every map opens the real Cesium viewer; loading and errors never imitate a globe. */
+import { Component, lazy, Suspense, useMemo, useState } from 'react';
+import { Loader } from '@mantine/core';
+import { useT } from '../../core/i18n';
+import { loadCesium } from './loadCesium';
+class Safe extends Component {
+  state = { bad: false };
+  static getDerivedStateFromError() { return { bad: true }; }
+  componentDidCatch(error) { console.warn('Cesium no disponible:', error); }
+  render() { return this.state.bad ? this.props.fallback : this.props.children; }
+}
 export default function Earth(props) {
-  const mode = props.mode || 'hero', ref = useRef(null), [seen, setSeen] = useState(mode !== 'hero');
-  useEffect(() => { const el = ref.current; if (!el || typeof IntersectionObserver === 'undefined') { setSeen(true); return; } const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setSeen(true); io.disconnect(); } }, { rootMargin: '200px' }); io.observe(el); return () => io.disconnect(); }, []);
-  const flat = <div className={'earthwrap earthwrap-' + mode}><div className={'earth earth-flat earth-' + mode}><div className="cssplanet"><div className="cssplanet-tex" style={{ backgroundImage: `url(${earth})` }} /></div></div></div>;
-  const stars = Array.from({ length: 40 }, (_, i) => <i key={i} style={{ left: ((i * 37) % 100) + '%', top: ((i * 53) % 100) + '%', animationDelay: (i % 7) * 0.5 + 's' }} />);
-  const blank = mode === 'hero' ? <div className={'earthwrap earthwrap-' + mode}><div className={'earth earth-flat earth-' + mode} /></div> : <div className="earth-skel">{stars}<span className="earth-spin" /></div>;
-  if (!GL) return <div ref={ref}>{flat}</div>;
-  return <div ref={ref}>{seen ? <Safe fallback={flat}><Suspense fallback={blank}><EarthView {...props} /></Suspense></Safe> : blank}</div>;
+  const { lang } = useT(), [attempt, setAttempt] = useState(0), mode = props.mode || 'hero';
+  const EarthView = useMemo(() => lazy(loadCesium), [attempt]);
+  const fallback = <div className={'earthwrap earthwrap-' + mode}><div className={'earth earth-' + mode + ' cesium-message'} role="alert">
+    <b>{lang === 'es' ? 'No se pudo iniciar el mapa 3D de Cesium.' : 'The Cesium 3D map could not start.'}</b>
+    <button className="textlink" onClick={() => setAttempt((value) => value + 1)}>{lang === 'es' ? 'Reintentar mapa 3D' : 'Retry 3D map'}</button>
+  </div></div>;
+  const loading = <div className={'earthwrap earthwrap-' + mode}><div className={'earth earth-' + mode + ' cesium-message'} role="status"><Loader color="forest" size="sm" /><span>{lang === 'es' ? 'Cargando Cesium…' : 'Loading Cesium…'}</span></div></div>;
+  return <div style={mode === 'pick' ? { height: '100%' } : undefined}><Safe key={attempt} fallback={fallback}><Suspense fallback={loading}><EarthView {...props} /></Suspense></Safe></div>;
 }

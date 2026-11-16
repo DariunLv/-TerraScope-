@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { Drawer, Switch, Progress, Button } from '@mantine/core';
 import { IconRadar2, IconEye, IconSparkles, IconTelescope, IconChecks, IconRefresh, IconArrowRight, IconBrain, IconSearch, IconBulb, IconTargetArrow, IconShieldCheck } from '@tabler/icons-react';
 import Killa from '../../killa/Killa';
+import Interpret from '../../shared/Interpret';
 import { useStore } from '../../core/store';
 import { useT } from '../../core/i18n';
 import { runCycle, STEPS, nextRunIn } from './agent';
@@ -43,6 +44,7 @@ function Panel({ opened, onClose }) {
           {run && <Progress value={a.pct} color="forest" size="sm" animated />}
           <ol className="sp-loop">{STEPS.map((s, i) => { const I = ST[s][0]; return <li key={s} className={(run && i === idx ? 'on ' : '') + (!run && a.last ? 'ok ' : run && i < idx ? 'ok' : '')}><span><I size={16} /></span>{ST[s][lang === 'es' ? 1 : 2]}</li>; })}</ol>
           {a.rows && <div className="sp-kpis">{[2, 1, 0].map((v) => <div key={v} style={{ '--c': LV[v].c }}><b>{counts[v]}</b><span>{LV[v][lang]}</span></div>)}</div>}
+          {a.rows?.length > 0 && !run && <Interpret kind="table" title={L('Resumen del Centinela', 'Sentinel summary')} facts={JSON.stringify({ source: a.src, lastReview: a.last, reviewedLakes: a.rows.length, missing: a.missing, normal: counts[0], watch: counts[1], alert: counts[2], forecastChecks: a.ledger, note: 'Sentinel levels describe recent climate anomalies, not the Decide risk index; logged forecasts use a nominal 90% interval, not a guarantee' })} how={L('Los conteos resumen la revisión del Centinela. La verificación compara pronósticos anteriores con datos que llegaron después.', 'Counts summarise the Sentinel review. Verification compares earlier forecasts with data that arrived later.')} plain={L('Una alerta prioriza qué confirmar; la cobertura de un intervalo no garantiza que todos los próximos pronósticos acierten.', 'An alert prioritises what to confirm; interval coverage does not guarantee every next forecast will succeed.')} />}
           <h4 className="sp-t"><IconSparkles size={16} />{L('Qué cambió', 'What changed')}</h4>
           {a.log.length === 0 ? <p className="sp-m">{L('Aún no hay cambios. El Centinela compara cada revisión con la anterior.', 'No changes yet. The Sentinel compares each review with the previous one.')}</p> : <ul className="sp-ev">{a.log.slice(0, 5).map((e, i) => <li key={i}>{ev(e)}</li>)}</ul>}
           <h4 className="sp-t"><IconSearch size={16} />{L('Lo que nadie pidió buscar', 'What nobody asked to look for')}</h4>
@@ -52,10 +54,10 @@ function Panel({ opened, onClose }) {
           <h4 className="sp-t"><IconChecks size={16} />{L('Verificación de lo que predijo', 'Checking what it predicted')}</h4>
           <p className="sp-m">{a.ledger.total > 0 ? L(`${a.ledger.hits} de ${a.ledger.total} predicciones acertaron (el rango del 90 %).`, `${a.ledger.hits} of ${a.ledger.total} predictions were right (the 90 % range).`) : L(`${a.ledger.pending} predicciones anotadas. Se verificarán solas cuando lleguen los datos del año pronosticado.`, `${a.ledger.pending} predictions logged. They will verify themselves when data for the forecast year arrives.`)}</p>
           <div className="sp-btns">
-            <Button color="forest" size="md" leftSection={<IconRefresh size={18} />} loading={run} onClick={runCycle}>{L('Revisar ahora', 'Review now')}</Button>
+            <Button color="forest" size="md" leftSection={<IconRefresh size={18} />} loading={run} onClick={() => runCycle({ refresh: true })}>{L('Revisar ahora', 'Review now')}</Button>
             <Button variant="default" size="md" rightSection={<IconArrowRight size={16} />} onClick={() => { onClose(); setView('decidir'); setTimeout(() => document.querySelector('.disc')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 600); }}>{L('Ver todos los hallazgos', 'See all findings')}</Button>
           </div>
-          <p className="sp-m">{a.src === 'demo' || !a.src ? L('Usa datos de práctica (simulados). Con datos reales, los hallazgos describen el territorio.', 'Using practice (simulated) data. With real data, findings describe the territory.') : L('Usa datos reales de NASA POWER.', 'Using real NASA POWER data.')}</p>
+          <p className="sp-m">{a.src === 'unavailable' ? L('No se pudieron cargar datos reales. Reintenta o activa Práctica.', 'Real data could not be loaded. Retry or enable Practice.') : a.src === 'demo' || !a.src ? L('Usa datos de práctica (simulados). Con datos reales, los hallazgos describen el territorio.', 'Using practice (simulated) data. With real data, findings describe the territory.') : L('Usa datos reales de NASA POWER.', 'Using real NASA POWER data.')}{a.missing > 0 && L(` ${a.missing} lugares sin evaluar.`, ` ${a.missing} locations not assessed.`)}{a.limited && L(' La revisión automática está limitada a 200 lugares por ciclo.', 'Automatic review is limited to 200 locations per cycle.')}</p>
         </div>
       </div>
     </Drawer>

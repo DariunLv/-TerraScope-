@@ -1,17 +1,42 @@
 # Detectives de Tendencias (React)
 Equipo The Innovators · NASA Space Apps 2026 · Puno · Sede Moquegua
 
-Stack: Vite, React, Mantine, Framer Motion, GSAP, react-globe.gl, MapLibre + NASA GIBS, Zustand, canvas-confetti.
+Stack: Vite, React, Mantine, Framer Motion, GSAP, CesiumJS, MapLibre + NASA GIBS, Zustand, canvas-confetti.
+
+## Estado actual tras la auditoría (16/11/2026)
+
+Se conservó el diseño existente. El informe de hallazgos y correcciones está en [docs/AUDITORIA_2026-11-16.md](docs/AUDITORIA_2026-11-16.md).
+
+- Node.js `^20.19.0 || >=22.12.0`; verificado con Node 24.12.0.
+- `npm test`: regresiones de Cesium, flujos, datos, CSV, navegación, concurrencia, descargador y API. `npm run build`: compilación de producción y workers.
+- Datos reales y práctica están separados. Un fallo real muestra un aviso; las simulaciones requieren activar Práctica. NASA POWER es un modelo climático, no una medición del nivel del lago.
+- Instantánea regenerada: 68 puntos, 1981–2025, 540 meses por serie. Los valores ausentes permanecen ausentes. Cada consulta conserva fuente, cobertura y fecha; se informa si se usa una instantánea antigua tras fallar la actualización.
+- `npm run datos` actualiza la instantánea. `npm run datos -- archivo.csv` incluye un inventario propio. Para otra salida: `npm run datos -- --output ruta/archivo.json`. Las pruebas del descargador usan respuestas controladas y una salida temporal.
+- El selector 3D permite mover el mapa, elegir los mismos lugares por nombre en el mapa y los botones, buscar, centrar y ver todas las opciones.
+- La página aparece directamente y Cesium se prepara en segundo plano, sin pantalla de carga inicial ni esfera CSS. Sus recursos se publican en `/cesium/Assets`, `/cesium/Workers`, `/cesium/ThirdParty` y `/cesium/Widgets`. La configuración de static-copy v4 elimina las cuatro carpetas iniciales de la ruta de origen.
+- Se conservan resultados y borradores al cambiar de sección durante la sesión. Sección, lugar y filtros principales se reflejan en la URL y responden a Atrás/Adelante.
+- Los CSV mensuales admiten `year,month,value,anomaly` o `fecha,valor`. Si hay varias columnas de medición, usa una columna explícita `value`/`valor`. Límite: 5 MB, 100 000 filas y 2400 meses.
+- La clave opcional de Anthropic se guarda en `sessionStorage`; se elimina del almacenamiento persistente anterior al migrarla. Los reportes siguen guardándose localmente y requieren confirmación para borrarlos.
+
+### Configuración de la API
+
+`api/chat.js` requiere un entorno con funciones Node (por ejemplo Vercel). El servidor estático de Vite y GitHub Pages no ejecutan esta API; las reglas locales funcionan sin ella. Configura `GROQ_API_KEY` o `GEMINI_API_KEY` únicamente en el servidor. `GROQ_MODEL` y `GEMINI_MODEL` son opcionales.
+
+Para una cuota compartida entre instancias configura `UPSTASH_REDIS_REST_URL` y `UPSTASH_REDIS_REST_TOKEN` (también se admiten `KV_REST_API_URL`/`KV_REST_API_TOKEN`) y `CHAT_REQUIRE_SHARED_LIMIT=true`. Sin Redis, se utiliza un límite acotado por instancia; no equivale a una cuota global. Si se exige Redis y no responde, la API rechaza la consulta y Killa usa reglas. No se crearon recursos externos ni se desplegó la aplicación durante esta corrección.
+
+Límites opcionales: `CHAT_REQUESTS_PER_MINUTE` (20 por cliente de forma predeterminada) y `CHAT_GLOBAL_REQUESTS_PER_MINUTE` (100). Los mensajes se validan antes de llamar al proveedor y cada consulta tiene un presupuesto máximo de 25 segundos.
+
+Las notas de versiones siguientes son históricas; las reglas de datos y configuración de esta sección tienen precedencia.
 
 ```bash
 npm install
 npm run dev      # desarrollo
 npm run build    # produce dist/ (se puede subir a GitHub Pages / Netlify / Vercel)
 ```
-- Modo "Datos reales" usa NASA POWER (requiere internet). Si falla, cae a datos de práctica simulados y lo avisa.
-- Estadística en `src/lib/stats.js` (Mann-Kendall, Sen+IC, regresión+t, TFPW, Pettitt).
+- Modo "Datos reales" usa NASA POWER o su instantánea histórica. Si falla, muestra un aviso para reintentar o activar Práctica.
+- Estadística en `src/lib/analysis/stats.js` (Mann-Kendall, Sen+IC, regresión+t, TFPW, Pettitt).
 - Literatura y brechas: `docs/REVISION_LITERATURA.md` y `src/gaps.js`.
-- Textos ES/EN: `src/i18n.js`.
+- Textos ES/EN: `src/core/i18n.js`.
 
 ## v2
 - Componentes de [React Bits](https://reactbits.dev) en `src/rb/` (Aurora, Particles, SplitText, BlurText, GradientText, ShinyText, CountUp, SpotlightCard, Magnet, StarBorder, ClickSpark, ScrollVelocity, Stepper). Licencia MIT + Commons Clause: se pueden usar dentro de tu app, no revender los componentes solos.
@@ -25,7 +50,7 @@ npm run build    # produce dist/ (se puede subir a GitHub Pages / Netlify / Verc
 - Importar CSV (Giovanni, AppEEARS, CDO, KNMI): fecha AAAA-MM(-DD) + valor.
 - SciChart.js no se incluyó: requiere licencia y WASM; Plotly con WebGL cubre grandes volúmenes.
 
-## v5 (actual)
+## v5 (histórico)
 - Tema claro; acentos oscuros en verde (#0c5a43) y azul (#1e3a8a); vidrio solo en barra, veredicto y modal.
 - Planeta 3D en el inicio (con respaldo si no hay WebGL) y mapa mundial D3 que funciona sin conexión; modal satelital NASA GIBS con contorno de países de respaldo.
 - Escaneo de 30 lugares con corrección FDR; preguntas guiadas; pestañas nuevas: Periodos, Diario (SciChart), Validación; superficie 3D.
@@ -43,7 +68,7 @@ npm run build    # produce dist/ (se puede subir a GitHub Pages / Netlify / Verc
 - Pendiente de comprobar con internet: NASA POWER en vivo, imágenes de NASA GIBS y enlaces "Abrir en mi punto".
 
 
-## v7 (actual): planeta CesiumJS, inteligencia ambiental y lagos ampliado
+## v7 (histórico): planeta CesiumJS, inteligencia ambiental y lagos ampliado
 
 Instalar y ejecutar (hay dependencias nuevas, así que `npm install` es obligatorio):
 
@@ -87,11 +112,11 @@ npm run dev
 
 **Centinela (IA que vigila sola)** — `src/lib/agent.js`, `AgentPanel.jsx`. Mientras la app esté abierta revisa todos los lagos cada 15 minutos (observar, aprender, descubrir, hipótesis, evidencia, verificar), guarda su memoria en el navegador, avisa los cambios de semáforo y verifica sus propios pronósticos anteriores. Botón "Centinela" en la barra.
 
-**Asistente con modelo de lenguaje real (opcional)** — `src/lib/llm.js`. Ajustes (engranaje del chat): *Reglas* (sin red), *IA local* con Ollama (`ollama pull llama3.2`, y `OLLAMA_ORIGINS=*`), o *Claude* con tu clave de API (se guarda solo en tu navegador). El modelo solo recibe un resumen numérico del análisis y tiene prohibido inventar. Si falla, responde con reglas.
+**Asistente con modelo de lenguaje real (opcional)** — `src/lib/llm.js`. Ajustes (engranaje del chat): *Reglas* (sin red), *IA local* con Ollama (`ollama pull llama3.2`, y `OLLAMA_ORIGINS=http://localhost:5173` (usa el origen real indicado por la app)), o *Claude* con tu clave de API (se guarda solo durante la sesión del navegador). El modelo solo recibe un resumen numérico del análisis y tiene prohibido inventar. Si falla, responde con reglas.
 
 **Datos reales ya descargados (modo sin internet)**
 1. Con internet: `npm run datos` (genera `public/datos/clima-lagos.json`, 68 puntos, NASA POWER).
-2. `npm run build`. La app usa primero esa instantánea, luego la caché del navegador, luego la descarga en vivo y, al final, datos de práctica.
+2. `npm run build`. La app valida la instantánea y la caché antes de usarlas; si hace falta intenta NASA POWER. Los datos de práctica requieren elegir explícitamente ese modo.
 3. Inventario oficial: Lagos → subir CSV. Plantillas en `public/plantillas/`. `npm run datos -- archivo.csv` descarga datos para tus propios lagos.
 
 **Validación retrospectiva** (sección "¿Habría avisado a tiempo?"): recalcula el semáforo mes a mes con datos que existían entonces y mide con cuántos meses de anticipación avisó antes del mínimo de agua. Con datos de práctica es solo un ejemplo; úsala con la instantánea real (por ejemplo desde 2015 para Pasto Grande).

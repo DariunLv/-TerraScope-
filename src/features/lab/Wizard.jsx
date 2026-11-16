@@ -1,6 +1,6 @@
 /* Asistente “Nueva investigación”: Mantine Stepper + React Hook Form + Zod + Framer Motion.
    Cada paso se valida antes de avanzar y queda marcado con un check verde. */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { V, PLACES } from '../../lib/nasa/data';
 import { useStore } from '../../core/store';
 import { useT } from '../../core/i18n';
+import { readSession, writeSession, useSessionState } from '../../core/useSessionState';
 export const GROUPS = [['Temperatura', 'Temperature', ['T2M', 'T2M_MAX', 'T2M_MIN', 'TS', 'T2MDEW']], ['Agua', 'Water', ['PRECTOTCORR', 'EVLAND', 'RH2M', 'QV2M', 'GWETTOP', 'GWETROOT', 'GWETPROF']], ['Aire y energía', 'Air & energy', ['WS10M', 'PS', 'ALLSKY_SFC_SW_DWN', 'CLOUD_AMT']]];
 const num = (code, lo, hi) => z.number({ error: code }).min(lo, { error: code }).max(hi, { error: code });
 const schema = z.object({
@@ -28,15 +29,19 @@ export default function Wizard({ onRun, busy, defaults }) {
   const { lang } = useT(); const L = (a, b) => (lang === 'es' ? a : b);
   const { place, lakes } = useStore();
   const known = PLACES.some((p) => p.id === place.id);
-  const { control, handleSubmit, trigger, watch, setValue, formState: { errors } } = useForm({ resolver: zodResolver(schema), mode: 'onChange', defaultValues: { how: known ? 'list' : 'coords', pick: known ? 'p:' + place.id : null, lat: place.lat, lon: place.lon, vars: defaults.vars, years: defaults.years, ds: defaults.ds } });
-  const [active, setActive] = useState(0), [done, setDone] = useState(0), [dir, setDir] = useState(1);
+  const { control, handleSubmit, trigger, watch, setValue, formState: { errors } } = useForm({ resolver: zodResolver(schema), mode: 'onChange', defaultValues: { how: known ? 'list' : 'coords', pick: known ? 'p:' + place.id : null, lat: place.lat, lon: place.lon, vars: defaults.vars, years: defaults.years, ds: defaults.ds, ...readSession('wizard:draft') } });
+  const [active, setActive] = useSessionState('wizard:step', 0), [done, setDone] = useSessionState('wizard:done', 0), [dir, setDir] = useState(1);
+  useEffect(() => { const subscription = watch((draft) => writeSession('wizard:draft', draft)); return () => subscription.unsubscribe(); }, [watch]);
+  const placeKey = `${place.id}:${place.lat}:${place.lon}`, previousPlace = useRef(readSession('wizard:place') || placeKey);
   useEffect(() => { // si el usuario elige otro punto en el planeta, el formulario lo refleja
+    if (previousPlace.current === placeKey) { writeSession('wizard:place', placeKey); return; }
+    previousPlace.current = placeKey; writeSession('wizard:place', placeKey);
     const k = PLACES.some((p) => p.id === place.id); setValue('how', k ? 'list' : 'coords'); setValue('pick', k ? 'p:' + place.id : null); setValue('lat', place.lat); setValue('lon', place.lon);
   }, [place.lat, place.lon]);
   const v = watch(), err = (k) => (errors[k] ? MSG[lang][errors[k].message] || errors[k].message : null);
   const opts = [{ group: L('Lugares del mundo', 'World places'), items: PLACES.map((p) => ({ value: 'p:' + p.id, label: p[lang] })) }, { group: L('Lagos y lagunas del Perú', 'Lakes of Peru'), items: lakes.map((l) => ({ value: 'l:' + l.id, label: l.name })) }];
   const setPick = (val) => { setValue('pick', val, { shouldValidate: true }); if (!val) return; const [t, id] = val.split(':'), o = t === 'p' ? PLACES.find((x) => x.id === id) : lakes.find((x) => x.id === id); if (o) { setValue('lat', o.lat); setValue('lon', o.lon); } };
-  const go = async (to) => { if (to > active) { if (!(await trigger(FIELDS[active]))) return; setDone((d) => Math.max(d, active + 1)); } setDir(to > active ? 1 : -1); setActive(to); };
+  const go = async (to) => { if (busy || to < 0 || to > 3) return; if (to > active) { if (!(await trigger(FIELDS[active], { shouldFocus: true }))) return; setDone((d) => Math.max(d, active + 1)); } setDir(to > active ? 1 : -1); setActive(to); };
   const label = () => { if (v.how === 'coords' || !v.pick) return `${v.lat}°, ${v.lon}°`; const [t, id] = v.pick.split(':'); return t === 'p' ? PLACES.find((x) => x.id === id)?.[lang] : lakes.find((x) => x.id === id)?.name; };
   const submit = (d) => {
     let pl = { id: 'custom', lat: +(+d.lat).toFixed(3), lon: +(+d.lon).toFixed(3) };
@@ -45,9 +50,9 @@ export default function Wizard({ onRun, busy, defaults }) {
   };
   const steps = [[IconMapPin, L('Lugar', 'Place'), L('¿Dónde?', 'Where?')], [IconListCheck, L('Variables', 'Variables'), L('¿Qué medir?', 'What to measure?')], [IconCalendar, L('Periodo', 'Period'), L('¿Cuándo?', 'When?')], [IconRocket, L('Revisar', 'Review'), L('Todo listo', 'All set')]];
   return (
-    <form className="wizard" onSubmit={handleSubmit(submit)}>
+    <form className="wizard" aria-label={L('Nueva investigación', 'New investigation')} data-step={active + 1} aria-busy={busy} onKeyDown={(event) => { if (event.key === 'Enter' && event.target.tagName === 'INPUT' && event.target.getAttribute('role') !== 'combobox' && !['checkbox', 'radio'].includes(event.target.type) && active < 3) { event.preventDefault(); go(active + 1); } }} onSubmit={(event) => { if (busy || active < 3) { event.preventDefault(); if (!busy) go(active + 1); } else handleSubmit(submit)(event); }}>
       <Stepper active={active} onStepClick={(i) => i <= done && go(i)} color="forest" size="lg" iconSize={52} className="tsstep" classNames={{ stepLabel: "tsstep-l", stepDescription: "tsstep-d" }} completedIcon={<IconCheck size={18} />} allowNextStepsSelect={false}>
-        {steps.map(([Ic, a, b], i) => <Stepper.Step key={i} icon={<Ic size={18} />} label={a} description={b} />)}
+        {steps.map(([Ic, a, b], i) => <Stepper.Step key={i} disabled={busy} aria-current={i === active ? 'step' : undefined} icon={<Ic size={18} />} label={a} description={b} />)}
       </Stepper>
       <div className="wizbody">
         <AnimatePresence mode="wait" custom={dir}>
@@ -55,7 +60,7 @@ export default function Wizard({ onRun, busy, defaults }) {
             {active === 0 && (<>
               <p className="qq">{L('¿Qué lugar quieres investigar?', 'Which place do you want to investigate?')}</p>
               <Controller name="how" control={control} render={({ field }) => <SegmentedControl color="navy" value={field.value} onChange={field.onChange} data={[{ value: 'list', label: L('Elegir de la lista', 'Pick from the list') }, { value: 'coords', label: L('Escribir coordenadas', 'Type coordinates') }]} />} />
-              {v.how === 'list' ? <Select mt="sm" searchable size="md" data={opts} value={v.pick} onChange={setPick} error={err('pick')} placeholder={L('Busca un lugar o un lago…', 'Search a place or a lake…')} maxDropdownHeight={260} leftSection={<IconSearch size={18} />} />
+              {v.how === 'list' ? <Select mt="sm" searchable size="md" aria-label={L('Lugar de investigación', 'Investigation place')} data={opts} value={v.pick} onChange={setPick} error={err('pick')} placeholder={L('Busca un lugar o un lago…', 'Search a place or a lake…')} maxDropdownHeight={260} leftSection={<IconSearch size={18} />} />
                 : <Group mt="sm" grow align="flex-start">
                   <Controller name="lat" control={control} render={({ field }) => <NumberInput label={L('Latitud', 'Latitude')} description={L('Sur es negativo', 'South is negative')} value={field.value} onChange={(x) => field.onChange(x === '' ? NaN : x)} error={err('lat')} decimalScale={3} step={0.5} />} />
                   <Controller name="lon" control={control} render={({ field }) => <NumberInput label={L('Longitud', 'Longitude')} description={L('Oeste es negativo', 'West is negative')} value={field.value} onChange={(x) => field.onChange(x === '' ? NaN : x)} error={err('lon')} decimalScale={3} step={0.5} />} />
@@ -90,8 +95,8 @@ export default function Wizard({ onRun, busy, defaults }) {
         </AnimatePresence>
       </div>
       <div className="row" style={{ justifyContent: 'space-between' }}>
-        <Button variant="subtle" color="gray" leftSection={<IconArrowLeft size={16} />} onClick={() => go(active - 1)} style={{ visibility: active ? 'visible' : 'hidden' }}>{L('Atrás', 'Back')}</Button>
-        {active < 3 ? <Button key="next" type="button" color="forest" size="md" rightSection={<IconArrowRight size={18} />} onClick={() => go(active + 1)}>{L('Continuar', 'Continue')}</Button>
+        <Button disabled={busy} variant="subtle" color="gray" leftSection={<IconArrowLeft size={16} />} onClick={() => go(active - 1)} style={{ visibility: active ? 'visible' : 'hidden' }}>{L('Atrás', 'Back')}</Button>
+        {active < 3 ? <Button disabled={busy} key="next" type="button" color="forest" size="md" rightSection={<IconArrowRight size={18} />} onClick={() => go(active + 1)}>{L('Continuar', 'Continue')}</Button>
           : <Button key="run" type="submit" color="forest" size="md" loading={busy} leftSection={<IconSearch size={18} />}>{L('Investigar', 'Investigate')}</Button>}
       </div>
     </form>

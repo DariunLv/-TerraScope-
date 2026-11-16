@@ -59,7 +59,7 @@ export function backtest(y, m0, { H = 12, span = 96, step = 6 } = {}) {
   }
   const res = {}; MODELS.forEach((m) => { const o = out[m], sdH = o.errs.map((e) => Math.sqrt(mean(e.map((x) => x * x)))), bias = mean(o.errs.flat()); res[m] = { mae: mean(o.abs), rmse: Math.sqrt(mean(o.sq)), bias, sdH }; });
   const best = MODELS.reduce((a, b) => (res[a].mae <= res[b].mae ? a : b));
-  MODELS.forEach((m) => { res[m].skill = 1 - res[m].mae / res.naive.mae; });
+  MODELS.forEach((m) => { res[m].skill = res.naive.mae > 0 ? 1 - res[m].mae / res.naive.mae : res[m].mae === 0 ? 0 : -1; });
   return { res, best, folds: Math.floor((n - H - first) / step) + 1 };
 }
 
@@ -69,4 +69,9 @@ export function spread(sdH, h) {
   return Array.from({ length: h }, (_, i) => (i < sm.length ? sm[i] : last * Math.sqrt(1 + (i - sm.length + 1) / 24)));
 }
 export const climatology = (y, m0) => { const g = Array.from({ length: 12 }, () => []); y.forEach((v, t) => g[(m0 + t) % 12].push(v)); return g.map(mean); };
+export function yearComparison(observed, forecast) {
+  const previous = observed.slice(-12), next = forecast.slice(0, 12);
+  const previousMean = mean(previous), nextMean = mean(next);
+  return { previousMean, nextMean, delta: nextMean - previousMean, observedMonths: previous.length, forecastMonths: next.length };
+}
 export { mean, sdev };

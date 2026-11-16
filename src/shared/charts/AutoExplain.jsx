@@ -1,54 +1,44 @@
-/* Explicación automática para CUALQUIER gráfico: Killa lo explica en palabras simples con los números reales del gráfico.
-   Si ya hay un botón “Explícame” cerca (de ese mismo bloque), este se oculta para no repetirlo. */
+/* Each chart keeps its explanation; only an adjacent dedicated explanation replaces it. */
 import { useEffect, useRef, useState } from 'react';
 import Interpret from '../Interpret';
 import { useT } from '../../core/i18n';
-const num = (v) => typeof v === 'number' && isFinite(v);
-const f = (v) => (Math.abs(v) >= 100 ? Math.round(v) : +v.toFixed(2));
-export function stats(name, xs, ys) {
-  const y = ys.filter(num); if (y.length < 2) return '';
-  const lo = Math.min(...y), hi = Math.max(...y), first = y[0], last = y[y.length - 1], iLo = ys.indexOf(lo), iHi = ys.indexOf(hi);
-  const lbl = (i) => (xs && xs[i] != null ? ` (${String(xs[i]).slice(0, 10)})` : '');
-  const d = last - first, dir = Math.abs(d) < (hi - lo) * 0.05 ? 'flat' : d > 0 ? 'rising' : 'falling';
-  return `${name || 'series'}: ${y.length} points, min ${f(lo)}${lbl(iLo)}, max ${f(hi)}${lbl(iHi)}, first ${f(first)}, last ${f(last)}, overall ${dir} (${d >= 0 ? '+' : ''}${f(d)})`;
+export { stats, plotlyFacts, echartsFacts, tableFacts } from './chartFacts';
+
+function dedicatedExplanation(element) {
+  for (let next = element?.nextElementSibling; next; next = next.nextElementSibling) {
+    if (next.matches('.interp')) return true;
+    if (next.matches('h1,h2,h3,h4,table,[data-chart-kind],[data-auto-explain]') || next.querySelector('[data-chart-kind],[data-auto-explain],.interp')) return false;
+    if (!next.matches('p,small,.mini,.legend')) return false;
+  }
+  return false;
 }
-export function plotlyFacts(data = [], layout = {}) {
-  const t = (x) => (typeof x === 'string' ? x : x?.text || '');
-  const out = [];
-  if (t(layout.title)) out.push('title: ' + t(layout.title));
-  if (t(layout.xaxis?.title)) out.push('x axis: ' + t(layout.xaxis.title));
-  if (t(layout.yaxis?.title)) out.push('y axis: ' + t(layout.yaxis.title));
-  data.slice(0, 5).forEach((tr) => {
-    const nm = tr.name || tr.type || 'series';
-    if (tr.type === 'surface' || tr.type === 'heatmap') { const z = (tr.z || []).flat().filter(num); if (z.length) out.push(`${nm} (${tr.type}): values from ${f(Math.min(...z))} to ${f(Math.max(...z))}`); return; }
-    if (tr.type === 'pie') { out.push(`pie: ${(tr.labels || []).slice(0, 6).join(', ')}`); return; }
-    if (Array.isArray(tr.x) && Array.isArray(tr.y)) {
-      if (tr.x.every(num) && tr.y.some((v) => typeof v === 'string')) { const rows = tr.y.map((l, i) => [l, tr.x[i]]).sort((a, b) => b[1] - a[1]); out.push(`${nm} (bars): top ${rows.slice(0, 3).map((r) => `${r[0]} ${f(r[1])}`).join('; ')}; lowest ${rows.slice(-2).map((r) => `${r[0]} ${f(r[1])}`).join('; ')}`); return; }
-      const s = stats(nm, tr.x, tr.y); if (s) out.push(s);
-    }
-  });
-  return out.join('\n');
-}
-export function echartsFacts(opt = {}) {
-  const out = []; const t = Array.isArray(opt.title) ? opt.title[0]?.text : opt.title?.text; if (t) out.push('title: ' + t);
-  const xs = opt.xAxis?.data || (Array.isArray(opt.xAxis) ? opt.xAxis[0]?.data : null);
-  (opt.series || []).slice(0, 5).forEach((s) => { const ys = (s.data || []).map((d) => (num(d) ? d : Array.isArray(d) ? d[1] : d?.value)); const st = stats(s.name || s.type, xs, ys); if (st) out.push(st); });
-  return out.join('\n');
-}
-export default function AutoExplain({ facts, title, kind = 'chart' }) {
-  const { lang } = useT(), L = (a, b) => (lang === 'es' ? a : b), ref = useRef(null), [hide, setHide] = useState(false), [ttl, setTtl] = useState(title || '');
+export default function AutoExplain({ facts, title, kind = 'chart', how, plain, next }) {
+  const { lang } = useT(), L = (a, b) => lang === 'es' ? a : b;
+  const ref = useRef(null), [hide, setHide] = useState(false), [inferredTitle, setInferredTitle] = useState(''), [context, setContext] = useState('');
   useEffect(() => {
-    const el = ref.current; if (!el) return;
-    const host = el.closest('.glass,.card,.panel,.mantine-Tabs-panel,section') || el.parentElement?.parentElement;
-    const mine = el.querySelector('.interp');
-    if (host && [...host.querySelectorAll('.interp')].some((n) => n !== mine && !n.closest('[data-auto-explain]'))) { setHide(true); return; }
-    if (!title) { const h = (el.parentElement?.previousElementSibling?.matches?.('h2,h3,h4') ? el.parentElement.previousElementSibling : null) || host?.querySelector('h2,h3,h4'); if (h) setTtl(h.textContent.trim()); }
+    const el = ref.current;
+    setHide(dedicatedExplanation(el));
+    setContext(el?.closest('[data-analysis-context]')?.getAttribute('data-analysis-context') || '');
+    if (title || !el) return;
+    let heading = null;
+    for (let node = el.previousElementSibling; node; node = node.previousElementSibling) {
+      if (node.matches('h2,h3,h4')) { heading = node; break; }
+    }
+    const host = el.parentElement;
+    setInferredTitle((heading || host?.querySelector('h2,h3,h4'))?.textContent?.trim() || '');
   });
-  const f2 = (facts || '').trim();
-  if (hide || !f2) return <span ref={ref} data-auto-explain hidden />;
-  const lines = f2.split('\n');
-  const nice = (l) => l.replace(/^.*\((surface|heatmap)\): values from ([\d.-]+) to ([\d.-]+)$/, (m, t, a, b) => lang === 'es' ? `en este gráfico ${t === 'surface' ? '3D' : 'de colores'} los valores van de ${a} a ${b}; las zonas más altas o más intensas son los valores mayores.` : `in this ${t === 'surface' ? '3D' : 'colour'} chart the values range from ${a} to ${b}; the higher or more intense areas are the larger values.`).replace(/^(\w[^:]*):\s*(\d+) points, min ([\d.-]+)(\s\([^)]*\))?, max ([\d.-]+)(\s\([^)]*\))?, first ([\d.-]+), last ([\d.-]+), overall (\w+) \(([^)]*)\)/, (m, n, c, lo, a, hi, b, fi, la, dir, d) => lang === 'es' ? `${n}: ${c} datos; el valor más bajo es ${lo}${a || ''} y el más alto ${hi}${b || ''}; empieza en ${fi}, termina en ${la} (${dir === 'rising' ? 'sube' : dir === 'falling' ? 'baja' : 'casi no cambia'}, ${d}).` : `${n}: ${c} values; the lowest is ${lo}${a || ''} and the highest ${hi}${b || ''}; it starts at ${fi} and ends at ${la} (${dir === 'rising' ? 'rising' : dir === 'falling' ? 'falling' : 'roughly flat'}, ${d}).`);
-  const plain = L('Qué dice aquí: ', 'What it says here: ') + lines.filter((l) => /points|bars|values|pie/.test(l)).slice(0, 2).map(nice).join(' ') + (lines.some((l) => /points|bars|values|pie/.test(l)) ? '' : L('muestra cómo cambia esta variable.', 'shows how this variable changes.'));
-  const how = L('Cómo se lee: el eje horizontal muestra el tiempo o la categoría y el vertical el valor medido; cuanto más alta la línea o la barra, mayor el valor.', 'How to read it: the horizontal axis shows time or category and the vertical axis the measured value; the higher the line or bar, the larger the value.');
-  return <div ref={ref} data-auto-explain className="auto-ex"><Interpret title={ttl || L('Gráfico', 'Chart')} facts={`${kind}\n${f2}`} plain={plain} how={how} /></div>;
+  const content = String(facts || '').trim();
+  if (hide || !content) return <span ref={ref} data-auto-explain hidden />;
+  const radar = /radar/.test(content), scatter = /\(scatter\)/.test(content), heat = /heatmap|surface|warming-stripes/.test(content + kind), boxes = /boxplot/.test(content), categories = /\(categories\)/.test(content);
+  const reading = how || (kind === 'table'
+    ? L('Cada fila es un registro y cada columna una característica. Compara valores de la misma columna, con sus unidades y periodo.', 'Each row is a record and each column a characteristic. Compare values within a column, keeping units and periods together.')
+    : radar ? L('Cada radio representa una variable. Compara el valor con la referencia del mismo eje; no confundas una desviación con un porcentaje.', 'Each spoke represents a variable. Compare it with the reference on the same axis; a deviation is not a percentage.')
+    : scatter ? L('Cada punto reúne dos coordenadas. Los ejes indican qué se compara; la posición no establece una secuencia temporal ni una causa.', 'Each point pairs two coordinates. The axes identify what is compared; position does not establish time order or causation.')
+    : heat ? L('La posición identifica el año, mes o categoría y el color o altura representa el valor según la escala.', 'Position identifies the year, month or category; colour or height represents the value on the scale.')
+    : boxes ? L('La caja resume los cuartiles y la mediana. Sus extremos y bigotes describen la dispersión; no son por sí solos un intervalo de pronóstico.', 'The box summarises quartiles and median. Its edges and whiskers describe spread; they are not themselves a forecast interval.')
+    : categories ? L('Cada barra o sector corresponde a una categoría. Lee su etiqueta y escala antes de comparar tamaños.', 'Each bar or sector represents a category. Read labels and scales before comparing sizes.')
+    : L('Revisa las etiquetas y unidades de cada eje. Las líneas o barras muestran los valores; los extremos por sí solos no prueban una tendencia.', 'Check axis labels and units. Lines or bars show values; endpoints alone do not prove a trend.'));
+  const summaries = content.split('\n').filter(line => /points|values, min|categories|radar/.test(line)).slice(0, 2);
+  const summary = summaries.map(line => lang === 'es' ? line.replace(/points/g, 'datos').replace(/values, min/g, 'valores, mínimo').replace(/, min /g, ', mínimo ').replace(/, max /g, ', máximo ').replace(/, first /g, ', primero ').replace(/, last /g, ', último ').replace(/, difference /g, ', diferencia ').replace(/; endpoints alone do not establish a trend/g, '; los extremos no prueban una tendencia').replace(/\(categories\)/g, '(categorías)') : line).join(' ');
+  return <div ref={ref} data-auto-explain className="auto-ex"><Interpret title={title || inferredTitle || L('Gráfico', 'Chart')} kind={kind === 'table' ? 'table' : 'chart'} facts={[context, content].filter(Boolean).join('\n')} how={reading} plain={plain || summary || L('Comprueba las variables, sus unidades y su referencia antes de concluir. Killa utiliza únicamente los datos de este bloque.', 'Check variables, units and reference before drawing conclusions. Killa uses only this block’s data.')} next={next} /></div>;
 }

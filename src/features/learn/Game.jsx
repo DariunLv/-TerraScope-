@@ -47,12 +47,12 @@ function Glossary({ L, lang }) {
   const [q, setQ] = useState(''), i = lang === 'es' ? 0 : 1;
   const list = useMemo(() => GLOSSARY.filter((g) => (g[0] + g[1] + g[2] + g[3]).toLowerCase().includes(q.toLowerCase())), [q]);
   return (<div>
-    <TextInput radius="xl" size="md" leftSection={<IconSearch size={16} />} placeholder={L('Buscar un término…', 'Search a term…')} value={q} onChange={(e) => setQ(e.currentTarget.value)} mb="md" />
+    <TextInput radius="xl" size="md" aria-label={L('Buscar un término', 'Search a term')} leftSection={<IconSearch size={16} />} placeholder={L('Buscar un término…', 'Search a term…')} value={q} onChange={(e) => setQ(e.currentTarget.value)} mb="md" />
     <div className="gloss">{list.map((g) => <div key={g[0]} className="gl card"><b>{g[i]}</b><p>{g[i + 2]}</p></div>)}{!list.length && <p className="mini">{L('No hay resultados.', 'No results.')}</p>}</div>
   </div>);
 }
 
-function Quiz({ L, lang, best, onFinish }) {
+export function Quiz({ L, lang, best, onFinish }) {
   const i = lang === 'es' ? 0 : 1, [k, setK] = useState(0), [pick, setPick] = useState(null), [score, setScore] = useState(0), [fin, setFin] = useState(false);
   const q = QUIZ[k], right = pick === q?.[3];
   const next = () => { if (k + 1 >= QUIZ.length) { setFin(true); onFinish(score); } else { setK(k + 1); setPick(null); } };

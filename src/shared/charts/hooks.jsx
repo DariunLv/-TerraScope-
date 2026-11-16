@@ -7,7 +7,7 @@ export function useWidth() {
   useEffect(() => { const ro = new ResizeObserver(([e]) => setW(Math.max(260, Math.round(e.contentRect.width)))); if (ref.current) ro.observe(ref.current); return () => ro.disconnect(); }, []);
   return [ref, w];
 }
-export function PlotView({ build, deps, h = 260, explain = true }) {
+export function PlotView({ build, deps, h = 260, explain = true, explanation }) {
   const [ref, w] = useWidth(); const [facts, setFacts] = useState('');
   useEffect(() => {
     const el = ref.current; if (!el) return;
@@ -15,9 +15,9 @@ export function PlotView({ build, deps, h = 260, explain = true }) {
     try { const tx = [...p.querySelectorAll('text')].map((t) => t.textContent.trim()).filter((t) => t && !/^[-−\d.,%\s]+$/.test(t)).slice(0, 18).join(' | '); const nums = [...p.querySelectorAll('text')].map((t) => parseFloat(t.textContent.replace(/[−]/g, '-').replace(/,/g, ''))).filter((n) => isFinite(n)); setFacts(`chart labels: ${tx}\naxis values range ${nums.length ? Math.min(...nums) + ' to ' + Math.max(...nums) : 'n/a'}; ${p.querySelectorAll('circle,rect,path').length} drawn marks`); } catch { /* sin texto */ }
     return () => p.remove();
   }, [w, ...deps]);
-  return <><div ref={ref} style={{ width: '100%', minHeight: h, overflow: 'hidden' }} />{explain && <AutoExplain facts={facts} />}</>;
+  return <><div data-chart-kind="observable" ref={ref} style={{ width: '100%', minHeight: h, overflow: 'hidden' }} />{explain && <AutoExplain facts={explanation?.facts || facts + '\nThese are axis labels and drawn marks, not the original observations. Do not infer observation counts or data extremes from ticks.'} {...explanation} />}</>;
 }
-export function EChart({ option, deps, h = 300, onClick, explain = true }) {
+export function EChart({ option, deps, h = 300, onClick, explain = true, explanation }) {
   const ref = useRef(null); const ch = useRef(null); const cb = useRef(onClick); cb.current = onClick;
   useEffect(() => {
     ch.current = echarts.init(ref.current, null, { renderer: 'canvas' }); ch.current.on('click', (e) => cb.current?.(e));
@@ -25,7 +25,7 @@ export function EChart({ option, deps, h = 300, onClick, explain = true }) {
     return () => { ro.disconnect(); ch.current?.dispose(); };
   }, []);
   useEffect(() => { ch.current?.setOption(option, true); }, deps);
-  return <><div ref={ref} style={{ width: '100%', height: h }} />{explain && <AutoExplain facts={echartsFacts(option)} />}</>;
+  return <><div data-chart-kind="echarts" ref={ref} style={{ width: '100%', height: h }} />{explain && <AutoExplain facts={echartsFacts(option)} {...explanation} />}</>;
 }
 export function olsBand(x, y) {
   const n = x.length, xb = x.reduce((a, b) => a + b, 0) / n, yb = y.reduce((a, b) => a + b, 0) / n;

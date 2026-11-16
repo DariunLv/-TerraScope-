@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MantineProvider } from '@mantine/core';
 import { MotionConfig } from 'framer-motion';
@@ -15,12 +15,13 @@ import { V } from '../lib/nasa/data';
 vi.mock('../shared/charts/hooks', () => ({ EChart: () => null, PlotView: () => null }));
 vi.mock('../shared/analysis/Intel', () => ({ MES: { es: [], en: [] } }));
 vi.mock('../shared/Interpret', () => ({ default: () => null }));
+vi.mock('../shared/earth/Earth', () => ({ default: () => null }));
 
 const theme = { colors: { forest: Array(10).fill('#0c5a43'), navy: Array(10).fill('#1e3a8a') } };
 const wrap = children => <MantineProvider theme={theme}><MotionConfig reducedMotion="always">{children}</MotionConfig></MantineProvider>;
 const defaults = { vars: ['T2M'], years: [1981, 2025], ds: true };
 const next = async user => user.click(screen.getByRole('button', { name: 'Continuar' }));
-const atStep = n => waitFor(() => expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe(String(n)));
+const atStep = n => waitFor(() => expect(screen.getByRole('form', { name: 'Nueva investigación' }).getAttribute('data-step')).toBe(String(n)));
 
 beforeEach(() => {
   localStorage.clear();
@@ -59,7 +60,7 @@ describe('Manual investigation', () => {
     await next(user);
     await screen.findByText('Revisa tu investigación');
     expect(run).not.toHaveBeenCalled();
-    await user.click(screen.getByRole('button', { name: 'Editar variables' }));
+    await user.click(screen.getByRole('button', { name: /Variables.*Qué medir/ }));
     await screen.findByText(/¿Qué variables quieres analizar/);
     expect(screen.getByLabelText(V.T2M.es[0]).checked).toBe(true);
     await next(user);
@@ -73,9 +74,9 @@ describe('Manual investigation', () => {
 
   it('locks navigation while an investigation is running', () => {
     render(wrap(<Wizard defaults={defaults} onRun={vi.fn()} busy />));
-    expect(screen.getByRole('button', { name: 'Atrás' }).disabled).toBe(true);
+    expect(screen.getByText('Atrás').closest('button').disabled).toBe(true);
     expect(screen.getByRole('button', { name: 'Continuar' }).disabled).toBe(true);
-    expect(screen.getByRole('button', { name: /Lugar ¿Dónde/ }).disabled).toBe(true);
+    expect(screen.getByRole('button', { name: /Lugar.*Dónde/ }).disabled).toBe(true);
   });
 });
 
@@ -83,19 +84,12 @@ describe('Guided investigation', () => {
   it('requires choices and launches the selected landscape with its clues', async () => {
     const user = userEvent.setup();
     render(wrap(<Questions />));
-    expect(screen.getByRole('button', { name: 'Continuar' }).disabled).toBe(true);
+    expect(screen.queryByRole('button', { name: 'Investigar con estas pistas' })).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Alta montaña' }));
-    await next(user);
-    await screen.findByText('¿Qué te preocupa?');
-    expect(screen.getByRole('button', { name: 'Continuar' }).disabled).toBe(true);
+    expect(screen.queryByRole('button', { name: 'Investigar con estas pistas' })).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Agua y sequía' }));
-    await next(user);
     await screen.findByText('Pistas recomendadas');
-    await user.click(screen.getByRole('button', { name: 'Atrás' }));
-    await screen.findByText('¿Qué te preocupa?');
     expect(screen.getByRole('button', { name: 'Agua y sequía' }).getAttribute('aria-pressed')).toBe('true');
-    await next(user);
-    await screen.findByText('Pistas recomendadas');
     await user.click(screen.getByRole('button', { name: 'Investigar con estas pistas' }));
     expect(useStore.getState().view).toBe('lab');
     expect(useStore.getState().job.vars).toEqual(['PRECTOTCORR', 'GWETROOT', 'RH2M', 'TS']);
@@ -136,14 +130,15 @@ describe('Citizen reports', () => {
     await user.clear(screen.getByLabelText('Describe lo que viste'));
     await user.type(screen.getByLabelText('Describe lo que viste'), note);
     await next(user);
-    await screen.findByText(note);
+    await waitFor(() => expect(screen.getByRole('form', { name: 'Nuevo reporte' }).getAttribute('data-step')).toBe('3'));
+    await waitFor(() => expect(within(screen.getByRole('form', { name: 'Nuevo reporte' })).getByText((text, element) => element.tagName === 'B' && text.includes(lake.name))).toBeTruthy());
     expect(localStorage.getItem('ts_reports_v1')).toBeNull();
-    await user.click(screen.getByRole('button', { name: 'Guardar reporte', exact: true }));
-    await screen.findByRole('status');
+    await user.click(screen.getByRole('button', { name: 'Enviar reporte', exact: true }));
+    await screen.findByText(note);
     const saved = JSON.parse(localStorage.getItem('ts_reports_v1'));
     expect(saved).toHaveLength(1);
     expect(saved[0]).toMatchObject({ lake: lake.id, note, kind: 'color', check: { code: 'na' } });
-    await atStep(1);
+    expect(screen.getByRole('form', { name: 'Nuevo reporte' }).getAttribute('data-step')).toBe('1');
   });
 });
 
@@ -154,7 +149,7 @@ describe('Learning quiz', () => {
     for (let index = 0; index < QUIZ.length; index++) {
       const question = QUIZ[index], label = index + 1 === QUIZ.length ? 'Ver resultado' : 'Siguiente';
       await screen.findByRole('heading', { name: question[0] });
-      expect(screen.getByRole('button', { name: label }).disabled).toBe(true);
+      expect(screen.queryByRole('button', { name: label })).toBeNull();
       const answer = screen.getByRole('button', { name: question[2][question[3]][0] });
       await user.click(answer);
       expect(answer.disabled).toBe(true);

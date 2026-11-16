@@ -1,3 +1,5 @@
+import Interpret from '../../shared/Interpret';
+import { stats as seriesStats } from '../../shared/charts/chartFacts';
 /* Simulaciones interactivas de las lecciones de Aprender. Todo se calcula en el navegador con los mismos métodos que usa la app. */
 import { useMemo, useState } from 'react';
 import { Slider, Switch, Button, SegmentedControl } from '@mantine/core';
@@ -23,6 +25,7 @@ export function TrendWidget({ L, es }) {
     <Row label={L('Cantidad de ruido (variación natural)', 'Amount of noise (natural variation)')}><Slider color="navy" min={0.2} max={3} step={0.1} value={nz} onChange={setNz} label={(v) => v.toFixed(1)} /></Row>
     <p className={'lw-res ' + (sig ? 'ok' : 'no')}><b>{sig ? L('La prueba detecta una tendencia', 'The test detects a trend') : L('No se distingue del ruido', 'Cannot be told from noise')}</b> · {L('pendiente estimada', 'estimated slope')} {o.slope.toFixed(3)} · Mann-Kendall {fp(mk.p, es)}</p>
     <button className="textlink" onClick={() => setSeed(seed + 1)}>{L('Otro ruido', 'Another noise')}</button>
+    <Interpret title={L('Tendencia frente a ruido', 'Trend versus noise')} facts={seriesStats('simulated series, arbitrary units', x, y) + `; planted slope per step ${sl}; noise scale ${nz}; estimated regression slope ${o.slope}; Mann-Kendall p ${mk.p}; no real observations`} how={L('Los puntos son una simulación y la línea resume su ajuste. La señal debe compararse con el ruido y con la prueba.', 'Points are simulated and the line summarises their fit. Compare the signal with noise and the test.')} plain={sig ? L('Esta realización supera el umbral de la prueba; al generar otro ruido el resultado puede cambiar.', 'This realisation exceeds the test threshold; another noise sample may change the result.') : L('La prueba no distingue una tendencia clara en esta realización.', 'The test does not distinguish a clear trend in this realisation.')} />
   </div>);
 }
 
@@ -40,6 +43,7 @@ export function SeasonWidget({ L }) {
     <Switch color="forest" checked={off} onChange={(e) => setOff(e.currentTarget.checked)} label={L('Quitar la estación (restar el promedio de cada mes)', 'Remove the season (subtract each month’s average)')} mt={8} />
     <p className="lw-res ok">{L('Pendiente que se ve', 'Slope you see')}: <b>{o.slope.toFixed(2)} {L('por año', 'per year')}</b> · {L('la real es', 'the real one is')} {tr.toFixed(2)}</p>
     <button className="textlink" onClick={() => setSeed(seed + 1)}>{L('Otro ruido', 'Another noise')}</button>
+    <Interpret title={L('Estaciones y tendencia', 'Seasons and trend')} facts={seriesStats('simulated monthly values, arbitrary units', y.map((_,i)=>i), y) + `; cycle amplitude ${amp}; planted annual slope ${tr}; estimated annual slope ${o.slope}; seasonal means removed ${off}`} how={L('El patrón repetido es el ciclo anual; el desplazamiento de fondo es la tendencia. El interruptor resta el promedio de cada mes.', 'The repeated pattern is the yearly cycle; background movement is the trend. The switch subtracts each month’s mean.')} plain={L('Quitar la estacionalidad ayuda a separar dos patrones distintos; no elimina toda la variación.', 'Removing seasonality helps separate two patterns; it does not remove all variation.')} />
   </div>);
 }
 
@@ -53,6 +57,7 @@ export function AlarmWidget({ L, es }) {
       <p className="lw-res no"><b>{r.c} {L('de', 'of')} {r.N}</b> {L(`series SIN tendencia dieron alarma (${((r.c / r.N) * 100).toFixed(1).replace('.', es ? ',' : '.')} %). Con p < 0,05 se espera cerca de 5 %.`, `series with NO trend raised an alarm (${((r.c / r.N) * 100).toFixed(1)} %). With p < 0.05 about 5 % is expected.`)}</p></>}
     <Row label={L('Si miras muchos lugares a la vez…', 'If you look at many places at once…')}><Slider color="navy" min={1} max={60} step={1} value={places} onChange={setPlaces} /></Row>
     <p className="lw-res ok">{L(`En ${places} lugares sin cambio real esperas unas ${(places * 0.05).toFixed(1).replace('.', ',')} falsas alarmas. Por eso Explorar usa un control de falsos descubrimientos (FDR).`, `In ${places} places with no real change you expect about ${(places * 0.05).toFixed(1)} false alarms. That is why Explore uses false-discovery-rate (FDR) control.`)}</p>
+    <Interpret title={L('Falsas alarmas al probar muchos lugares', 'False alarms when testing many locations')} facts={`simulation with no planted trend; significance threshold 0.05; locations ${places}; expected false alarms ${places*0.05}; ${r ? 'observed alarms '+r.c+' of '+r.N+' simulated series' : 'the simulation has not been run yet; do not invent observed counts'}`} how={L('Compara alarmas observadas y esperadas. Una prueba puede dar una falsa alarma incluso cuando no se sembró una tendencia.', 'Compare observed and expected alarms. A test can raise a false alarm even with no planted trend.')} plain={L('Al probar muchos lugares aumenta el número esperado de falsas alarmas; de ahí la corrección FDR.', 'Testing many locations increases the expected number of false alarms; this motivates FDR correction.')} />
   </div>);
 }
 
@@ -69,6 +74,7 @@ export function CoverWidget({ L }) {
     <p className="lw-res ok"><b>{cov} {L('de 30', 'of 30')}</b> {L(`intervalos de ${lvl} % contienen el valor verdadero (línea punteada): ${Math.round((cov / 30) * 100)} %. En rojo, los que fallan.`, `${lvl} % intervals contain the true value (dashed line): ${Math.round((cov / 30) * 100)} %. Failures in red.`)}</p>
     <p className="mini">{L('La app hace esta misma prueba con el pasaporte: compara el intervalo nominal del 90 % con la cobertura real de los últimos 5 años.', 'The app does this same test in the passport: it compares the nominal 90 % interval with the real coverage over the last 5 years.')}</p>
     <button className="textlink" onClick={() => setSeed(seed + 1)}>{L('Repetir el experimento', 'Repeat the experiment')}</button>
+    <Interpret title={L('Cobertura de intervalos', 'Interval coverage')} facts={`simulation; nominal coverage ${lvl}%; intervals 30; true value 0; intervals containing truth ${cov}; observed coverage ${Math.round(cov/30*100)}%; sample size per interval 10; no real measurements`} how={L('Cada segmento es un intervalo de un experimento. Verde significa que contiene el valor verdadero, situado en la línea punteada.', 'Each segment is an interval from one experiment. Green means it contains the true value at the dashed line.')} plain={L('La cobertura observada puede diferir de la nominal por azar. Compara el conjunto de experimentos, no la certeza de un intervalo individual.', 'Observed coverage can differ from nominal coverage by chance. Compare the collection of experiments, not certainty about one interval.')} />
   </div>);
 }
 
@@ -83,6 +89,7 @@ export function BalanceWidget({ L }) {
     <Row label={L('Lluvia al año (mm)', 'Rain per year (mm)')}><Slider color="navy" min={0} max={mx} step={25} value={p} onChange={setP} /></Row>
     <Row label={L('Evaporación al año (mm)', 'Evaporation per year (mm)')}><Slider color="orange" min={0} max={mx} step={25} value={e} onChange={setE} /></Row>
     <p className={'lw-res ' + (wb >= 0 ? 'ok' : 'no')}>{wb >= 0 ? L('El clima de la zona aporta más agua de la que evapora.', 'The area’s climate adds more water than it evaporates.') : L(`El clima de la zona pierde unos ${-wb} mm al año.`, `The area’s climate loses about ${-wb} mm per year.`)} <b>{L('Pero esto no es el nivel del lago:', 'But this is not the lake level:')}</b> {L('el nivel también depende de ríos, agua subterránea, glaciares y de cuánta agua se extrae. Por eso la app lo llama “balance climático”.', 'the level also depends on rivers, groundwater, glaciers and how much water is withdrawn. That is why the app calls it “climate balance”.')}</p>
+    <Interpret title={L('Balance climático simulado', 'Simulated climate balance')} facts={`didactic simulation; annual rainfall ${p} mm; annual evaporation ${e} mm; annual climate balance rainfall minus evaporation ${wb} mm; not measured lake level`} how={L('El balance resta evaporación a lluvia. El signo dice qué término es mayor en este ejemplo.', 'Balance subtracts evaporation from rain. Its sign tells which term is larger in this example.')} plain={L('El nivel del lago también depende de ríos, glaciares, aguas subterráneas y extracciones.', 'Lake level also depends on rivers, glaciers, groundwater and withdrawals.')} />
   </div>);
 }
 
@@ -96,5 +103,6 @@ export function SpuriousWidget({ L }) {
     <Switch color="forest" checked={off} onChange={(e) => setOff(e.currentTarget.checked)} label={L('Quitar la tendencia de cada serie', 'Remove each series’ trend')} />
     <p className={'lw-res ' + (Math.abs(r) > 0.5 ? 'no' : 'ok')}>{L('Correlación', 'Correlation')} r = <b>{r.toFixed(2).replace('.', L(',', '.'))}</b>. {Math.abs(r) > 0.5 ? L('Parecen relacionadas, pero son dos series independientes: solo comparten que ambas suben.', 'They look related, but they are two independent series: they only share that both go up.') : L('Sin la tendencia, desaparece la “relación”: era un espejismo.', 'Without the trend the “relationship” disappears: it was a mirage.')}</p>
     <button className="textlink" onClick={() => setSeed(seed + 1)}>{L('Otro par de series', 'Another pair of series')}</button>
+    <Interpret title={L('Correlación y tendencia compartida', 'Correlation and shared trend')} facts={`two independently generated simulated series; correlation ${r}; individual trends removed ${off}; observations per series ${a.length}; arbitrary units; association is not causation`} how={L('Las dos curvas se generaron de forma independiente y pueden compartir una tendencia. El interruptor quita sus tendencias individuales.', 'The curves were independently generated and may share a trend. The switch removes their individual trends.')} plain={L('Una correlación alta no demuestra que una serie cause la otra. Revisa qué ocurre al quitar la tendencia y repetir el ruido.', 'High correlation does not demonstrate causation. Check what happens when trends are removed and noise is resampled.')} />
   </div>);
 }

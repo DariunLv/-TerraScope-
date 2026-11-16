@@ -1,0 +1,36 @@
+import { beforeEach, expect, it, vi } from 'vitest';
+import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { MantineProvider } from '@mantine/core';
+import Decide from '../features/decide/Decide';
+import { useStore } from '../core/store';
+import { LAKES } from '../features/lakes/lakesData';
+import { lakeClimate } from '../features/lakes/lakeclim';
+import { assess, eelRaw, eelSpace, timeline, validate } from '../features/decide/decideEngine';
+import { explainChart } from '../features/decide/llm';
+const state=vi.hoisted(()=>({assessment:null,retrospective:null}));
+vi.mock('../lib/analysis/useAnalysis',()=>({useAnalysis:(type,payload)=>({value:payload?(type==='assess'?state.assessment:state.retrospective):null,loading:false,error:null})}));
+vi.mock('../shared/charts/hooks',async()=>{const {default:AutoExplain}=await import('../shared/charts/AutoExplain');const{echartsFacts}=await import('../shared/charts/chartFacts');return {EChart:({option,explanation})=><><div data-chart-kind="echarts"/><AutoExplain facts={echartsFacts(option)} {...explanation}/></>};});
+vi.mock('../features/decide/llm',async(original)=>({...await original(),explainChart:vi.fn().mockResolvedValue('Lectura de Killa con datos vigentes.')}));
+vi.mock('../killa/Killa',()=>({default:()=>null,VIEW_POSE:{},KillaNote:({title,children})=><div><b>{title}</b>{children}</div>}));
+vi.mock('../components/reactbits/SplitFlapText/SplitFlapText',()=>({default:({words})=><span>{words[0]}</span>}));
+beforeEach(async()=>{
+  HTMLElement.prototype.scrollTo=vi.fn();
+  localStorage.clear();const lake=LAKES[0],climate=await lakeClimate(lake,true),L=es=>es;
+  state.assessment=assess(climate,lake,L);const rows=timeline(climate,2015);state.retrospective={rows,validation:validate(climate,rows)};
+  const profiles=await Promise.all(LAKES.slice(0,5).map(async(lake)=>{const c=await lakeClimate(lake,true);return {...lake,raw:eelRaw(c,lake),level:0,zw:0,zt:0,near:Infinity,sev:0};}));
+  useStore.setState({lang:'es',practice:true,aud:'auth',lakes:LAKES,agent:{...useStore.getState().agent,status:'idle',rows:profiles,space:eelSpace(profiles),practice:true,src:'demo'}});
+});
+it('offers Killa for the gauge, scenarios, uncertainty, radar, PCA, comparison and passport with the correct context',async()=>{
+  const user=userEvent.setup(),theme={colors:{forest:Array(10).fill('#0c5a43'),navy:Array(10).fill('#1e3a8a')}};
+  const {container}=render(<MantineProvider theme={theme}><Decide/></MantineProvider>);
+  await screen.findByRole('img',{name:'Nivel de riesgo'});
+  const titles=['Riesgo y semáforo de '+LAKES[0].name,'Fuentes de incertidumbre','Huella ambiental de '+LAKES[0].name,'Mapa del lenguaje ambiental','Comparación de lagos similares','Pasaporte de evidencia de '+LAKES[0].name];
+  await waitFor(()=>titles.forEach(title=>expect(container.querySelector('[data-interpret-title="'+title+'"]')).toBeTruthy()));
+  const radar=container.querySelector('[data-interpret-title="'+titles[2]+'"]');
+  await user.click(within(radar).getByRole('button',{name:'Explícame este gráfico'}));
+  expect(await within(radar).findByText('Lectura de Killa con datos vigentes.')).toBeTruthy();
+  expect(explainChart.mock.calls.at(-1)[0].facts).toContain('standardised deviations');expect(explainChart.mock.calls.at(-1)[0].facts).toContain('simulated practice data');
+  const passport=container.querySelector('[data-interpret-title="'+titles.at(-1)+'"]');await user.click(within(passport).getByRole('button',{name:'Explícame esta tabla'}));
+  expect(explainChart.mock.calls.at(-1)[0].kind).toBe('table');expect(explainChart.mock.calls.at(-1)[0].facts).toContain('1981-01');
+});
