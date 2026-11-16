@@ -1162,3 +1162,12 @@ footer .fkilla{display:flex;justify-content:center;margin-bottom:6px}
 
 .about-bento .bf-d{max-width:100%}.about-bento .about-feat:is(.bf1,.bf2,.bf3,.bf4,.bf5,.bf7) .bf-d{max-width:calc(100% - 100px)}.about-bento .about-feat.bf1 .bf-d{max-width:calc(100% - 210px)}
 .st2 .lights{top:70px!important;right:22px!important}.ripple{bottom:60px!important}.trio-h{min-height:74px}
+
+/* v21 mapa plano: contenedor fijo, carga y posición de botones */
+.fm-map{position:absolute;inset:0}.fm-canvas{position:absolute!important;inset:0;width:100%;height:100%}
+.fm-canvas .maplibregl-canvas{width:100%!important;height:100%!important}
+.fm-load{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center;color:#cfe2f5;font:700 14px var(--fb);background:radial-gradient(120% 100% at 50% 0%,#0a1a3a,#02040c 70%);pointer-events:none}
+.earth-spin{width:34px;height:34px;border-radius:50%;border:3px solid rgba(255,255,255,.2);border-top-color:#5eead4;animation:spin .9s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+.earth-skel .earth-spin{position:absolute;left:50%;top:50%;margin:-17px 0 0 -17px}
+.fm-fly{left:auto!important;right:12px!important;bottom:34px!important;justify-content:flex-end;max-width:calc(100% - 270px)!important}
+@media(max-width:900px){.fm-fly{right:auto!important;left:12px!important;bottom:auto!important;top:74px!important;max-width:calc(100% - 24px)!important}}

@@ -46,8 +46,8 @@ export default function App() {
   useEffect(() => { // precarga en reposo: el globo 3D y las vistas principales ya están listos cuando se abren
     try { const c = navigator.connection; if (c && (c.saveData || /2g/.test(c.effectiveType || ''))) return; } catch { /* sin red info */ }
     const run = () => { import('./shared/earth/EarthView'); import('./features/explore/WorldMap'); import('./features/lab/Lab'); import('./features/decide/Decide'); };
-    const id = window.requestIdleCallback ? window.requestIdleCallback(run, { timeout: 4000 }) : setTimeout(run, 2500);
-    return () => { try { window.cancelIdleCallback ? window.cancelIdleCallback(id) : clearTimeout(id); } catch { /* */ } };
+    const id = setTimeout(run, 300);
+    return () => clearTimeout(id);
   }, []);
   useEffect(() => { startAgent(); const t = setTimeout(() => { try { sessionStorage.removeItem('ts_reload'); } catch { /* */ } }, 10000); const h = () => { if (!sessionStorage.getItem('ts_reload')) { try { sessionStorage.setItem('ts_reload', '1'); } catch { /* */ } location.reload(); } }; window.addEventListener('vite:preloadError', h); return () => { clearTimeout(t); window.removeEventListener('vite:preloadError', h); }; }, []);
   const practice = useStore((s) => s.practice), lakesL = useStore((s) => s.lakes);

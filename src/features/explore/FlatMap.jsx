@@ -19,7 +19,7 @@ const LAND = (() => { const l = feature(world, world.objects.countries); l.featu
 const FLY = [['Titicaca', -69.35, -15.85, 8.2], ['Amazon', -62, -4, 4.6], ['Himalaya', 86, 28, 5.2], ['Sahara', 10, 24, 4.6], ['Great Barrier Reef', 147, -18, 5], ['Alps', 9, 46.5, 6.2], ['Aral Sea', 60, 45, 5.8], ['Greenland', -42, 72, 3.6]];
 export default function FlatMap({ dots, res, place, setPlace, k, vlabel, onInvestigate }) {
   const { lang } = useT(), L = (a, b) => (lang === 'es' ? a : b), el = useRef(null), map = useRef(null), ml = useRef(null), popup = useRef(null), mark = useRef(null);
-  const [layer, setLayer] = useState('bm'), [ready, setReady] = useState(false), [tilt, setTilt] = useState(false);
+  const [fail, setFail] = useState(false), [layer, setLayer] = useState('bm'), [ready, setReady] = useState(false), [tilt, setTilt] = useState(false);
   const cb = useRef({}); cb.current = { setPlace, dots, res, k, vlabel, L };
   useEffect(() => {
     let dead = false, m;
@@ -28,11 +28,12 @@ export default function FlatMap({ dots, res, place, setPlace, k, vlabel, onInves
       const ls = LAYERS();
       m = new lib.Map({ container: el.current, center: [place.lon, place.lat], zoom: 2.4, minZoom: 1, maxZoom: 9, attributionControl: { compact: true }, renderWorldCopies: true,
         style: { version: 8, sources: { ...Object.fromEntries(Object.entries(ls).map(([id, [u, mz]]) => [id, { type: 'raster', tiles: [u], tileSize: 256, maxzoom: mz, attribution: 'NASA GIBS / EOSDIS' }])), land: { type: 'geojson', data: LAND }, pts: { type: 'geojson', data: { type: 'FeatureCollection', features: [] } } },
-          layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#02040c' } }, { id: 'bm', type: 'raster', source: 'bm' }, { id: 'tc', type: 'raster', source: 'tc', layout: { visibility: 'none' } }, { id: 'nl', type: 'raster', source: 'nl', layout: { visibility: 'none' } }, { id: 'lst', type: 'raster', source: 'lst', layout: { visibility: 'none' }, paint: { 'raster-opacity': 0.85 } }, { id: 'gpm', type: 'raster', source: 'gpm', layout: { visibility: 'none' }, paint: { 'raster-opacity': 0.85 } },
+          layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#0a2f5c' } }, { id: 'landbg', type: 'fill', source: 'land', paint: { 'fill-color': '#1d5a45' } }, { id: 'bm', type: 'raster', source: 'bm' }, { id: 'tc', type: 'raster', source: 'tc', layout: { visibility: 'none' } }, { id: 'nl', type: 'raster', source: 'nl', layout: { visibility: 'none' } }, { id: 'lst', type: 'raster', source: 'lst', layout: { visibility: 'none' }, paint: { 'raster-opacity': 0.85 } }, { id: 'gpm', type: 'raster', source: 'gpm', layout: { visibility: 'none' }, paint: { 'raster-opacity': 0.85 } },
             { id: 'cfill', type: 'fill', source: 'land', paint: { 'fill-color': '#5eead4', 'fill-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.22, 0] } },
             { id: 'cline', type: 'line', source: 'land', paint: { 'line-color': '#ffffff', 'line-opacity': 0.4, 'line-width': 0.7 } },
             { id: 'halo', type: 'circle', source: 'pts', paint: { 'circle-radius': ['+', ['get', 'r'], 7], 'circle-color': ['get', 'c'], 'circle-opacity': 0.22, 'circle-blur': 0.8 } },
             { id: 'dots', type: 'circle', source: 'pts', paint: { 'circle-radius': ['get', 'r'], 'circle-color': ['get', 'c'], 'circle-opacity': ['get', 'o'], 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 1.4 } }] } });
+      try { m.on('error', (e) => { window.__fmerr = (window.__fmerr || []).concat(String(e.error?.message || e.error || e).slice(0, 160)); }); } catch { /* depuración */ }
       m.addControl(new lib.NavigationControl({ visualizePitch: true }), 'top-right'); m.addControl(new lib.ScaleControl({ unit: 'metric' }), 'bottom-left');
       let hid = null;
       m.on('mousemove', 'cfill', (e) => { const f = e.features?.[0]; if (!f) return; if (hid != null && hid !== f.id) m.setFeatureState({ source: 'land', id: hid }, { hover: false }); hid = f.id; m.setFeatureState({ source: 'land', id: hid }, { hover: true }); });
@@ -42,8 +43,9 @@ export default function FlatMap({ dots, res, place, setPlace, k, vlabel, onInves
       m.on('mouseleave', 'dots', () => { m.getCanvas().style.cursor = ''; popup.current.remove(); });
       m.on('click', (e) => { const f = m.queryRenderedFeatures(e.point, { layers: ['dots'] })[0]; const { setPlace: sp, dots: ds } = cb.current; if (f) { const d = ds.find((x) => x.id === f.properties.id); if (d) return sp({ id: d.id, lat: d.lat, lon: d.lon }); } sp({ id: 'custom', lat: +e.lngLat.lat.toFixed(2), lon: +((((e.lngLat.lng + 180) % 360 + 360) % 360) - 180).toFixed(2) }); });
       const dot = document.createElement('div'); dot.className = 'fm-you'; mark.current = new lib.Marker({ element: dot }).setLngLat([place.lon, place.lat]).addTo(m);
-      m.on('load', () => { if (!dead) { map.current = m; setReady(true); } });
-    })();
+      m.once('style.load', () => { if (!dead) { map.current = m; setReady(true); m.resize(); } });
+      try { new ResizeObserver(() => m.resize()).observe(el.current); } catch { /* sin observer */ }
+    })().catch((e) => { window.__fmerr = [String(e?.message || e).slice(0, 300)]; setFail(true); });
     return () => { dead = true; try { m?.remove(); } catch { /* ya cerrado */ } };
   }, []); // eslint-disable-line
   useEffect(() => { const m = map.current; if (!ready || !m) return; ['bm', 'tc', 'nl', 'lst', 'gpm'].forEach((id) => m.setLayoutProperty(id, 'visibility', id === layer || id === 'bm' && layer !== 'tc' && layer !== 'nl' ? 'visible' : 'none')); }, [layer, ready]);
@@ -56,7 +58,7 @@ export default function FlatMap({ dots, res, place, setPlace, k, vlabel, onInves
   const toggleTilt = () => { const n = !tilt; setTilt(n); map.current?.easeTo({ pitch: n ? 58 : 0, bearing: n ? -18 : 0, duration: 900 }); };
   return (
     <div className="fm">
-      <div ref={el} className="fm-map" />
+      <div className="fm-map"><div ref={el} className="fm-canvas" />{!ready && !fail && <div className="fm-load"><span className="earth-spin" />{L('Cargando mapa…', 'Loading map…')}</div>}{fail && <div className="fm-load">{L('No se pudo cargar el mapa. Prueba el planeta 3D.', 'Could not load the map. Try the 3D planet.')}</div>}</div>
       <div className="fm-bar">
         <SegmentedControl size="xs" color="navy" value={layer} onChange={setLayer} data={[{ value: 'bm', label: L('Relieve', 'Relief') }, { value: 'tc', label: L('Color real', 'True color') }, { value: 'nl', label: L('Luces nocturnas', 'Night lights') }, { value: 'lst', label: L('Temperatura', 'Temperature') }, { value: 'gpm', label: L('Lluvia', 'Rain') }]} />
         <Button size="compact-sm" variant={tilt ? 'filled' : 'default'} color="navy" leftSection={<IconRotate3d size={15} />} onClick={toggleTilt}>{L('Inclinar 3D', '3D tilt')}</Button>
